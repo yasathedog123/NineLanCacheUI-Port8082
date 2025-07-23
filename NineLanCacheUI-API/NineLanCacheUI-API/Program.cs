@@ -1,0 +1,108 @@
+using NineLanCacheUI_API.Data;
+using Microsoft.EntityFrameworkCore;
+using NineLanCacheUI_API.Services.LogReader;
+using Microsoft.AspNetCore.Mvc;
+using System.Text.Json.Serialization;
+using NineLanCacheUI_API.Services;
+using NineLanCacheUI_API.Steam;
+using NineLanCacheUI_API.Services.OriginalDepotEnricher;
+using Microsoft.AspNetCore.ResponseCompression;
+using NineLanCacheUI_API.Hubs;
+namespace NineLanCacheUI_API
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
+
+            var lanCacheUIDataDirectory = builder.Configuration["LanCacheUIDataDirectory"];
+            if (lanCacheUIDataDirectory != null)
+            {
+                Directory.CreateDirectory(lanCacheUIDataDirectory);
+            }
+
+            // Add services to the container.
+            var connectionString = builder.Configuration.GetConnectionString("NineLanCacheUIContextConnection");
+            builder.Services.AddDbContext<NineLanCacheUIDBContext>(options =>
+                options.UseSqlServer(connectionString));
+
+            builder.Services.AddControllers(options =>
+            {
+                options.CacheProfiles.Add("ForeverCache",
+                    new CacheProfile()
+                    {
+                        Duration = 31536000,
+                        Location = ResponseCacheLocation.Any
+                    });
+            }).AddJsonOptions(x =>
+                 x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles); builder.Services.AddEndpointsApiExplorer();
+
+            builder.Services.AddControllers().AddJsonOptions(x => x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
+
+            builder.Services.AddSwaggerGen();
+            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+            builder.Services.AddOpenApi();
+            builder.Services.AddHostedService<DownloadEventAggregationHostedService>();
+            builder.Services.AddHttpClient();
+            builder.Services.AddSingleton<SteamManifestService>();
+            builder.Services.AddHostedService<FrontendRefresherService>();
+
+
+            if (Convert.ToBoolean(builder.Configuration["DirectSteamIntegration"]))
+            {
+                builder.Services.AddHostedService<SteamAppInfoService>();
+
+                //TODO should probably initialize the Steam session here rather than inside the service
+                builder.Services.AddSingleton<Steam3Session>();
+                builder.Services.AddSingleton<AppInfoHandler>();
+                builder.Services.AddSingleton<ISteamAppObtainerService, AppInfoHandler>(t => t.GetRequiredService<AppInfoHandler>());
+            }
+            else
+            {
+                builder.Services.AddHostedService<SteamDepotDownloaderHostedService>();
+                builder.Services.AddSingleton<SteamDepotEnricherHostedService>();
+                builder.Services.AddSingleton<ISteamAppObtainerService, OriginalSteamAppObtainerService>();
+            }
+
+            builder.Services.AddSignalR();
+            builder.Services.AddResponseCompression(opts =>
+            {
+                opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["application/octet-stream"]);
+            });
+
+            // Configure CORS policy
+            builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(
+                    builder =>
+                    {
+                        builder.AllowAnyOrigin()
+                               .AllowAnyMethod()
+                               .AllowAnyHeader();
+                    });
+            });
+
+            var app = builder.Build();
+
+            // Configure the HTTP request pipeline.
+            if (app.Environment.IsDevelopment())
+            {
+                app.MapOpenApi();
+            }
+
+            app.UseSwagger();
+            app.UseSwaggerUI();
+
+            app.UseHttpsRedirection();
+
+            app.UseAuthorization();
+            app.UseCors();
+
+            app.MapControllers();
+            app.MapHub<UIRefreshHub>("/uirefreshhub");
+
+            app.Run();
+        }
+    }
+}
