@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using NineLanCacheUI_API.Data;
 using NineLanCacheUI_API.Models;
 using System.Linq;
+using NineLanCacheUI_API.Helpers;
 
 namespace NineLanCacheUI_API.Controllers
 {
@@ -19,32 +20,29 @@ namespace NineLanCacheUI_API.Controllers
             _logger = logger;
             _context = context;
         }
-        [HttpGet]
-        public async Task<IActionResult> Test()
-        {
-            return Ok("API is working correctly.");
-        }
 
         [HttpGet]
-        public async Task<GetHitMissModel> GetHitMiss()
+        public async Task<GetHitMissModel> GetHitMiss([FromQuery] int days = 0, [FromQuery] bool excludeIPs = true)
         {
-            var excludedIPs = await _context.Settings
-                .Where(s => s.Key == "ExcludedIPs")
-                .Select(s => s.Value)
-                .ToListAsync();
+            var query = _context.DownloadEvents.AsQueryable();
 
-            excludedIPs = excludedIPs.SelectMany(ip => ip.Split(','))
-                                     .Select(ip => ip.Trim())
-                                     .Where(ip => !string.IsNullOrEmpty(ip))
-                                     .ToList();
+            if (excludeIPs)
+            {
+                var ips = await _context.ExcludedIps
+                    .Select(x => x.IpAddress.Trim())
+                    .ToListAsync();
 
-            var totalHitBytes = await _context.DownloadEvents
-                .Where(e => !excludedIPs.Contains(e.ClientIp))
-                .SumAsync(e => e.CacheHitBytes);
+                query = query.Where(e => !ips.Contains(e.ClientIp));
+            }
 
-            var totalMissBytes = await _context.DownloadEvents
-                .Where(e => !excludedIPs.Contains(e.ClientIp))
-                .SumAsync(e => e.CacheMissBytes);
+            if (days > 0)
+            {
+                var since = DateTime.UtcNow.AddDays(-days);
+                query = query.Where(e => e.LastUpdatedAt >= since);
+            }
+
+            var totalHitBytes = await query.SumAsync(e => e.CacheHitBytes);
+            var totalMissBytes = await query.SumAsync(e => e.CacheMissBytes);
 
             return new GetHitMissModel
             {
@@ -54,25 +52,30 @@ namespace NineLanCacheUI_API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetBytesByService()
+        public async Task<IActionResult> GetBytesByService([FromQuery] int days = 0, [FromQuery] bool excludeIPs = true)
         {
-            var excludedIPs = await _context.Settings
-                .Where(s => s.Key == "ExcludedIPs")
-                .Select(s => s.Value)
-                .ToListAsync();
+            var query = _context.DownloadEvents.AsQueryable();
 
-            excludedIPs = excludedIPs
-                .SelectMany(ip => ip.Split(','))
-                .Select(ip => ip.Trim())
-                .Where(ip => !string.IsNullOrEmpty(ip))
-                .ToList();
+            if (excludeIPs)
+            {
+                var ips = await _context.ExcludedIps
+                    .Select(x => x.IpAddress.Trim())
+                    .ToListAsync();
 
-            var groupedData = await _context.DownloadEvents
-                .Where(e => !excludedIPs.Contains(e.ClientIp))
+                query = query.Where(e => !ips.Contains(e.ClientIp));
+            }
+
+            if (days > 0)
+            {
+                var since = DateTime.UtcNow.AddDays(-days);
+                query = query.Where(e => e.LastUpdatedAt >= since);
+            }
+
+            var groupedData = await query
                 .GroupBy(e => e.CacheIdentifier)
                 .Select(g => new
                 {
-                    Service = g.Key,
+                    Service = ServiceNameFormatter.Format(g.Key),
                     TotalBytes = g.Sum(e => (long)(e.CacheHitBytes + e.CacheMissBytes))
                 })
                 .ToListAsync();
@@ -87,6 +90,85 @@ namespace NineLanCacheUI_API.Controllers
 
             return Ok(result);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetHitBytesByService([FromQuery] int days = 0, [FromQuery] bool excludeIPs = true)
+        {
+            var query = _context.DownloadEvents.AsQueryable();
+
+            if (excludeIPs)
+            {
+                var ips = await _context.ExcludedIps
+                    .Select(x => x.IpAddress.Trim())
+                    .ToListAsync();
+
+                query = query.Where(e => !ips.Contains(e.ClientIp));
+            }
+
+            if (days > 0)
+            {
+                var since = DateTime.UtcNow.AddDays(-days);
+                query = query.Where(e => e.LastUpdatedAt >= since);
+            }
+
+            var groupedData = await query
+                .GroupBy(e => e.CacheIdentifier)
+                .Select(g => new
+                {
+                    Service = ServiceNameFormatter.Format(g.Key),
+                    TotalBytes = g.Sum(e => (long)e.CacheHitBytes)
+                })
+                .ToListAsync();
+
+            var result = groupedData
+                .Where(s =>
+                    !string.IsNullOrEmpty(s.Service) &&
+                    !s.Service.Contains("192") &&
+                    !s.Service.Contains("10"))
+                .ToList();
+
+            return Ok(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetMissBytesByService([FromQuery] int days = 0, [FromQuery] bool excludeIPs = true)
+        {
+            var query = _context.DownloadEvents.AsQueryable();
+
+            if (excludeIPs)
+            {
+                var ips = await _context.ExcludedIps
+                    .Select(x => x.IpAddress.Trim())
+                    .ToListAsync();
+
+                query = query.Where(e => !ips.Contains(e.ClientIp));
+            }
+
+            if (days > 0)
+            {
+                var since = DateTime.UtcNow.AddDays(-days);
+                query = query.Where(e => e.LastUpdatedAt >= since);
+            }
+
+            var groupedData = await query
+                .GroupBy(e => e.CacheIdentifier)
+                .Select(g => new
+                {
+                    Service = ServiceNameFormatter.Format(g.Key),
+                    TotalBytes = g.Sum(e => (long)e.CacheMissBytes)
+                })
+                .ToListAsync();
+
+            var result = groupedData
+                .Where(s =>
+                    !string.IsNullOrEmpty(s.Service) &&
+                    !s.Service.Contains("192") &&
+                    !s.Service.Contains("10"))
+                .ToList();
+
+            return Ok(result);
+        }
+
 
     }
 }

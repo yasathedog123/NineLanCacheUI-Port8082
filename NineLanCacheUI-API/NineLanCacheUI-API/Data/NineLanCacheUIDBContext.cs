@@ -14,6 +14,7 @@ namespace NineLanCacheUI_API.Data
         public DbSet<DbDownloadEvent> DownloadEvents => Set<DbDownloadEvent>();
         public DbSet<DbSetting> Settings => Set<DbSetting>();
         public DbSet<DbSteamManifest> SteamManifests => Set<DbSteamManifest>();
+        public DbSet<DbExcludedIp> ExcludedIps => Set<DbExcludedIp>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -27,6 +28,10 @@ namespace NineLanCacheUI_API.Data
 
             modelBuilder.Entity<DbSteamDepot>()
                         .HasKey(pc => new { pc.SteamDepotId, pc.SteamAppId });
+
+            modelBuilder.Entity<DbExcludedIp>()
+                        .HasIndex(e => e.IpAddress)
+                        .IsUnique();
         }
 
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
