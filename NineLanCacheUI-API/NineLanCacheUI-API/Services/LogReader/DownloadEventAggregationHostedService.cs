@@ -202,7 +202,7 @@ namespace NineLanCacheUI_API.Services.LogReader
                             totalByteReadSetting.Value = TotalBytesRead.ToString();
 
                             await dbContext.SaveChangesAsync();
-                            //FrontendRefresherService.RequireFrontendRefresh();
+                            FrontendRefresherService.RequireFrontendRefresh();
                         });
                     }
                 }

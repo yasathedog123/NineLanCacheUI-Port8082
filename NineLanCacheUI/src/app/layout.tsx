@@ -48,11 +48,17 @@ export default function RootLayout({
                   <Link href="/" className="mr-5 hover:text-gray-900">
                     Dashboard
                   </Link>
-                  <Link href="/AlltimeDownloads" className="mr-5 hover:text-gray-900">
-                    All Time Downloads
+                  <Link href="/RecentDownloads" className="mr-5 hover:text-gray-900">
+                    Recent Downloads
+                  </Link>
+                   <Link href="/RecentSteamDownloads" className="mr-5 hover:text-gray-900">
+                    Recent Steam Downloads
                   </Link>
                   <Link href="/GamesDownloaded" className="mr-5 hover:text-gray-900">
                     Games Downloaded
+                  </Link>
+                  <Link href="/Stats" className="mr-5 hover:text-gray-900">
+                    Stats
                   </Link>
                   <Link href="/Settings" className="mr-5 hover:text-gray-900">
                     Settings
