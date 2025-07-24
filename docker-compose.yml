@@ -15,7 +15,7 @@ services:
       - SkipLinesBasedOnBytesRead=true
       - ASPNETCORE_HTTP_PORTS=80
     volumes:
-      - "/home/romit/lancacheUI/backenData:/var/ninelancacheuidata"
+      - "/home/romit/NineLanCacheUI/backendData:/var/ninelancacheuidata"
       - "/mnt/NvmeSSD/LanCacheData/logs:/var/ninelancacheui/lancachelogs:ro"
     dns:
       - 192.168.15.200
