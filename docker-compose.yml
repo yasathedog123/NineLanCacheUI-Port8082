@@ -25,5 +25,5 @@ services:
     ports:
       - '7402:3000'
     environment:
-      - BACKENDURL=http://192.168.15.200:7401 #iclude http/https here                           
+      - NEXT_PUBLIC_API_BASE_URL=http://192.168.15.200:7401 #iclude http/https here                           
       - AllowedHosts=*
