@@ -125,7 +125,6 @@ export default function Home() {
   
       return () => {
         connection.off("UpdateDownloadEvents", handler);
-        stopConnection();
       };
     }, []);
 

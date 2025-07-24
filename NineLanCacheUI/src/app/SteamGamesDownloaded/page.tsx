@@ -129,7 +129,6 @@ export default function SteamGamesPage() {
    
        return () => {
          connection.off("UpdateDownloadEvents", handler);
-         stopConnection();
        };
      }, []);
 

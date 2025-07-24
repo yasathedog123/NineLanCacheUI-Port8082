@@ -227,7 +227,6 @@ export default function RecentDownloads() {
 
     return () => {
       connection.off("UpdateDownloadEvents", handler);
-      stopConnection();
     };
   }, []);
 

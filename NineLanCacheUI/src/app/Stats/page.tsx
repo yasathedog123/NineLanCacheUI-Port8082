@@ -143,7 +143,6 @@ export default function Stats() {
   
       return () => {
         connection.off("UpdateDownloadEvents", handler);
-        stopConnection();
       };
     }, []);
 

@@ -228,7 +228,6 @@ export default function RecentSteamDownloads() {
   
       return () => {
         connection.off("UpdateDownloadEvents", handler);
-        stopConnection();
       };
     }, []);
 
