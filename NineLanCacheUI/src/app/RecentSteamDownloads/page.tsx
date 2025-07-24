@@ -14,8 +14,7 @@ import {
 } from "@syncfusion/ej2-react-grids";
 
 import { formatBytes } from "../../../lib/Utilities";
-import { getSignalRConnection } from "../../../lib/SignalR";
-import * as signalR from "@microsoft/signalr";
+import { getSignalRConnection, startConnection, stopConnection } from "../../../lib/SignalR";
 import { useRef } from "react";
 
 interface SteamDepot {
@@ -217,31 +216,21 @@ export default function RecentSteamDownloads() {
   }, [days, excludeIPs]);
 
   useEffect(() => {
-    const connection = getSignalRConnection();
-
-    async function start() {
-      try {
-        if (connection.state === signalR.HubConnectionState.Disconnected) {
-            await connection.start();
-        }
-        console.log("SignalR connected.");
-      } catch (err) {
-        console.error("SignalR connection error:", err);
-        setTimeout(start, 2000);
-      }
-    }
-
-    connection.on("UpdateDownloadEvents", () => {
-      fetchAndMergeNewData();
-    });
-
-    start();
-
-    return () => {
-      connection.off("UpdateDownloadEvents");
-      connection.stop();
-    };
-  }, []);
+      const connection = getSignalRConnection();
+  
+      const handler = () => {
+        fetchAndMergeNewData();
+      };
+  
+      connection.on("UpdateDownloadEvents", handler);
+  
+      startConnection();
+  
+      return () => {
+        connection.off("UpdateDownloadEvents", handler);
+        stopConnection();
+      };
+    }, []);
 
   return (
     <div className="p-6 mx-auto rounded-3xl" style={{ backgroundColor: "#1a1a1a", color: "#eee", width: "95%" }}>

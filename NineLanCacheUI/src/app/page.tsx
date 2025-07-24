@@ -10,8 +10,7 @@ import {
 } from '@syncfusion/ej2-react-charts';
 import { formatBytes, chartPalette } from "../../lib/Utilities";
 import React, { useEffect, useState } from 'react';
-import { getSignalRConnection } from "../../lib/SignalR";
-import * as signalR from "@microsoft/signalr";
+import { getSignalRConnection, stopConnection, startConnection } from "../../lib/SignalR";
 
 interface ServiceData {
   service: string;
@@ -114,32 +113,21 @@ export default function Home() {
   }, [debouncedDays, excludeIPs]);
 
   useEffect(() => {
-    const connection = getSignalRConnection();
-
-    async function start() {
-      try {
-        if (connection.state === signalR.HubConnectionState.Disconnected) {
-          await connection.start();
-        }
-        console.log('SignalR connected.');
-      } catch (err) {
-        console.error('SignalR connection error:', err);
-        setTimeout(start, 2000); // retry on fail
-      }
-    }
-
-    connection.on("UpdateDownloadEvents", () => {
-      fetchAll();
-
-    });
-
-    start();
-
-    return () => {
-      connection.off("UpdateDownloadEvents");
-      connection.stop();
-    };
-  }, []);
+      const connection = getSignalRConnection();
+  
+      const handler = () => {
+        fetchAll();
+      };
+  
+      connection.on("UpdateDownloadEvents", handler);
+  
+      startConnection();
+  
+      return () => {
+        connection.off("UpdateDownloadEvents", handler);
+        stopConnection();
+      };
+    }, []);
 
   const commonProps = {
     legendSettings: {

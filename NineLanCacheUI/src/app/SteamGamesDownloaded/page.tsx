@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import { PagerComponent } from "@syncfusion/ej2-react-grids";
 import Button from "../../components/Button";
-import { getSignalRConnection } from "../../../lib/SignalR";
-import * as signalR from "@microsoft/signalr";
+import { getSignalRConnection, startConnection, stopConnection } from "../../../lib/SignalR";
 
 type Game = {
   appid: number;
@@ -111,38 +110,28 @@ export default function SteamGamesPage() {
   }, [filterText]);
 
    useEffect(() => {
-      const connection = getSignalRConnection();
-  
-      async function start() {
-        try {
-          if (connection.state === signalR.HubConnectionState.Disconnected) {
-              await connection.start();
-          }
-          console.log("SignalR connected.");
-        } catch (err) {
-          console.error("SignalR connection error:", err);
-          setTimeout(start, 2000);
-        }
-      }
-  
-      connection.on("UpdateDownloadEvents", () => {
-        fetch("/api/proxy/SteamGames/GetSteamGames")
-            .then((res) => res.json())
-            .then((data) => {
-                setGames(data);
-            })
-            .catch((err) => {
-                console.error("Error fetching games:", err);
-            });
-      });
-  
-      start();
-  
-      return () => {
-        connection.off("UpdateDownloadEvents");
-        connection.stop();
-      };
-    }, []);
+       const connection = getSignalRConnection();
+   
+       const handler = () => {
+         fetch("/api/proxy/SteamGames/GetSteamGames")
+          .then((res) => res.json())
+          .then((data) => {
+            setGames(data);
+          })
+          .catch((err) => {
+            console.error("Error fetching games:", err);
+          });
+       };
+   
+       connection.on("UpdateDownloadEvents", handler);
+   
+       startConnection();
+   
+       return () => {
+         connection.off("UpdateDownloadEvents", handler);
+         stopConnection();
+       };
+     }, []);
 
   return (
     <div className="p-8 mx-auto" style={{ width: "95%"}}>
