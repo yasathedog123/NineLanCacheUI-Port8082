@@ -18,6 +18,23 @@ interface ServiceData {
   totalBytes: number;
 }
 
+const FILTER_KEY = "globalFilters";
+
+function getStoredFilters() {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(FILTER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function setStoredFilters(filters: any) {
+  localStorage.setItem(FILTER_KEY, JSON.stringify(filters));
+}
+
 export default function Home() {
   const [hitMissData, setHitMissData] = useState([
     { x: 'Hit Bytes', y: 0 },
@@ -27,9 +44,13 @@ export default function Home() {
   const [serviceSplitData, setServiceSplitData] = useState<{ x: string; y: number }[]>([]);
   const [missBytesByService, setMissBytesByService] = useState<{ x: string; y: number }[]>([]);
   const [hitBytesByService, setHitBytesByService] = useState<{ x: string; y: number }[]>([]);
-  const [selectedRange, setSelectedRange] = useState("0");
-  const [customDays, setCustomDays] = React.useState('');
-  const [excludeIPs, setExcludeIPs] = useState(true);
+  const [selectedRange, setSelectedRange] = useState(() => getStoredFilters()?.selectedRange || "0");
+  const [customDays, setCustomDays] = useState(() => getStoredFilters()?.customDays || "");
+  const [excludeIPs, setExcludeIPs] = useState(() => getStoredFilters()?.excludeIPs ?? true);
+
+  useEffect(() => {
+    setStoredFilters({ selectedRange, customDays, excludeIPs });
+  }, [selectedRange, customDays, excludeIPs]);
 
   // Compute effective days param
   const daysToUse =

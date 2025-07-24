@@ -40,6 +40,24 @@ interface DownloadEvent {
   steamDepot?: SteamDepot | null;
 }
 
+const FILTER_KEY = "globalFilters";
+
+function getStoredFilters() {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(FILTER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function setStoredFilters(filters: any) {
+  localStorage.setItem(FILTER_KEY, JSON.stringify(filters));
+}
+
+
 const PreloadableImage = ({ appId, onReady }: { appId: number, onReady: () => void }) => {
   const [imageError, setImageError] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -87,14 +105,16 @@ const PreloadableImage = ({ appId, onReady }: { appId: number, onReady: () => vo
   );
 };
 
-
-
 export default function RecentDownloads() {
   const gridRef = useRef<GridComponent | null>(null);
   const [loading, setLoading] = useState(false);
-  const [selectedRange, setSelectedRange] = useState<string>("0");
-  const [customDays, setCustomDays] = useState<string>("");
-  const [excludeIPs, setExcludeIPs] = useState<boolean>(true);
+  const [selectedRange, setSelectedRange] = useState(() => getStoredFilters()?.selectedRange || "0");
+  const [customDays, setCustomDays] = useState(() => getStoredFilters()?.customDays || "");
+  const [excludeIPs, setExcludeIPs] = useState(() => getStoredFilters()?.excludeIPs ?? true);
+
+  useEffect(() => {
+    setStoredFilters({ selectedRange, customDays, excludeIPs });
+  }, [selectedRange, customDays, excludeIPs]);
 
   const days =
     selectedRange === "custom" ? parseInt(customDays) || 0 : parseInt(selectedRange);
@@ -182,9 +202,10 @@ export default function RecentDownloads() {
     }
   }
 
-
-
   useEffect(() => {
+    if (gridRef.current) {
+        gridRef.current.dataSource = [];
+    }
     fetchData();
   }, [days, excludeIPs]);
 
