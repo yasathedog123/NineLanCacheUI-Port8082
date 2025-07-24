@@ -136,7 +136,7 @@ export default function RecentDownloads() {
         });
 
         gridRef.current.dataSource = updated
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .sort((a, b) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime())
           .slice(0, 100);
       }
 
@@ -173,7 +173,7 @@ export default function RecentDownloads() {
         });
 
         gridRef.current.dataSource = updated
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .sort((a, b) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime())
           .slice(0, 100);
       }
 

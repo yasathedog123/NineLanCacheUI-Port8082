@@ -366,3 +366,5 @@ DS_Store
 Thumbs.db
 manifests
 LanCacheUIData
+databases
+.DS_Store

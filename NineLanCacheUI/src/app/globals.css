@@ -1,3 +1,15 @@
+@import '../../node_modules/@syncfusion/ej2-base/styles/material.css';
+@import '../../node_modules/@syncfusion/ej2-buttons/styles/material.css';  
+@import '../../node_modules/@syncfusion/ej2-calendars/styles/material.css';  
+@import '../../node_modules/@syncfusion/ej2-dropdowns/styles/material.css';  
+@import '../../node_modules/@syncfusion/ej2-inputs/styles/material.css';  
+@import '../../node_modules/@syncfusion/ej2-navigations/styles/material.css';
+@import '../../node_modules/@syncfusion/ej2-popups/styles/material.css';
+@import '../../node_modules/@syncfusion/ej2-splitbuttons/styles/material.css';
+@import "../../node_modules/@syncfusion/ej2-react-grids/styles/material.css";
+@import '../../node_modules/@syncfusion/ej2-icons/styles/material.css';
+
+
 @import "tailwindcss";
 
 @theme {
@@ -200,4 +212,35 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 ::-webkit-scrollbar {
   width: 0px;
   height: 0px;
+}
+
+.e-filterbarcell {
+  background-color: #121212 !important;
+  color: #ffffff !important;
+}
+.e-input-group.e-control-wrapper{
+  background-color: #121212 !important; 
+  color: #ffffff !important;
+}
+
+.e-grid .e-gridpager .e-prevpage::before {
+  content: "⏴";
+}
+.e-grid .e-gridpager .e-firstpage::before {
+  content: "⏮";
+}
+.e-grid .e-gridpager .e-nextpage::before {
+  content: "⏵";
+}
+.e-grid .e-gridpager .e-lastpage::before {
+  content: "⏭";
+}
+
+.e-grid .e-gridpager .e-prevpagedisabled,
+.e-grid .e-gridpager .e-firstpagedisabled,
+.e-grid .e-gridpager .e-nextpagedisabled,
+.e-grid .e-gridpager .e-lastpagedisabled {
+  display: none !important;
+  /* font-size: 100px;
+  content: "⏭"!important; */
 }

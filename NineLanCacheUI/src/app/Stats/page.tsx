@@ -12,10 +12,32 @@ import { formatBytes, chartPalette } from "../../../lib/Utilities";
 import React, { useEffect, useState } from 'react';
 import { getSignalRConnection } from "../../../lib/SignalR";
 import * as signalR from "@microsoft/signalr";
+import {
+  GridComponent,
+  ColumnsDirective,
+  ColumnDirective,
+  Page,
+  Filter,
+  Sort,
+  Toolbar,
+  VirtualScroll 
+} from "@syncfusion/ej2-react-grids";
+import { useRef } from "react";
 
 interface ServiceData {
   service: string;
   totalBytes: number;
+}
+
+interface ClientData {
+  ipAddress: string;
+  totalBytes: number;
+}
+
+interface HitMissData {
+  ipAddress: string;
+  totalHits: number;
+  totalMisses: number;
 }
 
 export default function Stats() {
@@ -25,11 +47,13 @@ export default function Stats() {
   ]);
 
   const [serviceSplitData, setServiceSplitData] = useState<{ x: string; y: number }[]>([]);
-  const [missBytesByService, setMissBytesByService] = useState<{ x: string; y: number }[]>([]);
-  const [hitBytesByService, setHitBytesByService] = useState<{ x: string; y: number }[]>([]);
+  const [missBytesByClient, setMissBytesByClient] = useState<{ x: string; y: number }[]>([]);
+  const [hitBytesByClient, setHitBytesByClient] = useState<{ x: string; y: number }[]>([]);
   const [selectedRange, setSelectedRange] = useState("0");
   const [customDays, setCustomDays] = React.useState('');
   const [excludeIPs, setExcludeIPs] = useState(true);
+  const gridRef = useRef<GridComponent | null>(null);
+  const [hitMissGridData, setHitMissGridData] = useState([]);
 
   // Compute effective days param
   const daysToUse =
@@ -52,30 +76,24 @@ export default function Stats() {
 
   const fetchAll = async () => {
       try {
-        const base = `/api/proxy/Data`;
+        const base = `/api/proxy/Stats`;
         const qs = `?days=${debouncedDays}&excludeIPs=${excludeIPs}`;
 
-        const [hitMissRes, serviceRes, missRes, hitRes] = await Promise.all([
-          fetch(`${base}/GetHitMiss${qs}`),
-          fetch(`${base}/GetBytesByService${qs}`),
-          fetch(`${base}/GetMissBytesByService${qs}`),
-          fetch(`${base}/GetHitBytesByService${qs}`),
+        const [hitMissRes, clientHits, clientMisses] = await Promise.all([
+          fetch(`${base}/GetClientHitMissGrid${qs}`),
+          fetch(`${base}/GetClientHits${qs}`),
+          fetch(`${base}/GetClientMisses${qs}`)
         ]);
 
-        const hitMiss = await hitMissRes.json();
-        setHitMissData([
-          { x: 'Hit Bytes', y: hitMiss.totalHitBytes },
-          { x: 'Miss Bytes', y: hitMiss.totalMissBytes },
-        ]);
+        const hitMissGrid = await hitMissRes.json();
+        setHitMissGridData(hitMissGrid);
 
-        const service = await serviceRes.json();
-        setServiceSplitData(service.map((s: ServiceData) => ({ x: s.service, y: s.totalBytes })));
+        const service = await clientHits.json();
+        setHitBytesByClient(service.map((s: ClientData) => ({ x: s.ipAddress, y: s.totalBytes })));
 
-        const miss = await missRes.json();
-        setMissBytesByService(miss.map((s: ServiceData) => ({ x: s.service, y: s.totalBytes })));
+        const miss = await clientMisses.json();
+        setMissBytesByClient(miss.map((s: ClientData) => ({ x: s.ipAddress, y: s.totalBytes })));
 
-        const hit = await hitRes.json();
-        setHitBytesByService(hit.map((s: ServiceData) => ({ x: s.service, y: s.totalBytes })));
 
       } catch (err) {
         console.error("Failed to fetch data:", err);
@@ -118,7 +136,7 @@ export default function Stats() {
     legendSettings: {
       visible: true,
       textStyle: {
-        size: '16px',
+        size: '14px',
         color: '#ededed',
         fontFamily: 'Poppins, sans-serif',
         fontWeight: '600',
@@ -138,161 +156,125 @@ export default function Stats() {
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-8 p-6">
-        {/* Charts */}
-        <div className="w-full h-96">
-          <h2 className="text-lg font-semibold mb-2 text-center text-white">Cache Hit vs Miss (Bytes)</h2>
-          {hitMissData[0].y > 0 && (
-            <AccumulationChartComponent
-              {...commonProps}
-              tooltipRender={(args) => {
-                if (args.point?.y) {
-                  args.text = `${args.point.x}: ${formatBytes(args.point.y)}`;
-                }
-              }}
-            >
-              <Inject services={[PieSeries, AccumulationTooltip, AccumulationLegend]} />
-              <AccumulationSeriesCollectionDirective>
-                <AccumulationSeriesDirective
-                  dataSource={hitMissData}
-                  xName="x"
-                  yName="y"
-                  type="Pie"
-                  dataLabel={{ visible: true, name: 'x' }}
-                  palettes={['#4CAF50', '#ff3131ff']}
-                />
-              </AccumulationSeriesCollectionDirective>
-            </AccumulationChartComponent>
-          )}
-        </div>
+      <div className="p-6 mx-auto rounded-3xl" style={{ backgroundColor: "#1a1a1a", color: "#eee", width: "90%" }}>
+        <div className="flex flex-col p-6">
+          <div className="flex gap-6">
+            {/* Left side: Syncfusion Grid */}
+            <div className="w-2/4 overflow-x-auto">
+              <GridComponent 
+                ref={gridRef}
+                dataSource={hitMissGridData}
+                allowPaging={true}
+                pageSettings={{ pageSize: 15 }}
+                allowSorting={true}
+                allowFiltering={true}
+                filterSettings={{
+                  type: 'FilterBar',
+                  mode: 'Immediate',
+                  immediateModeDelay: 150
+                }}
+                height={ '55vh'}
+                
+              >
+                <ColumnsDirective>
+                  <ColumnDirective field="ipAddress" headerText="Service" width="150" />
+                  <ColumnDirective field="totalHits" headerText="Total Bytes" width="150"
+                    template={(props: HitMissData) => formatBytes(props.totalHits)} />
+                  <ColumnDirective field="totalMisses" headerText="Total Bytes" width="150"
+                    template={(props: HitMissData) => formatBytes(props.totalMisses)} />
+                </ColumnsDirective>
+                <Inject services={[Page, Sort, Filter, Toolbar]} />
+              </GridComponent>
+            </div>
 
-        <div className="w-full h-96">
-          <h2 className="text-lg font-semibold mb-2 text-center text-white">Download Requests by Service</h2>
-          {serviceSplitData.length > 0 && (
-            <AccumulationChartComponent
-              {...commonProps}
-              tooltipRender={(args) => {
-                if (args.point?.y) {
-                  args.text = `${args.point.x}: ${formatBytes(args.point.y)}`;
-                }
-              }}
-            >
-              <Inject services={[PieSeries, AccumulationTooltip, AccumulationLegend]} />
-              <AccumulationSeriesCollectionDirective>
-                <AccumulationSeriesDirective
-                  dataSource={serviceSplitData}
-                  xName="x"
-                  yName="y"
-                  type="Pie"
-                  dataLabel={{ visible: true, name: 'x' }}
-                  palettes={chartPalette}
-                />
-              </AccumulationSeriesCollectionDirective>
-            </AccumulationChartComponent>
-          )}
-        </div>
+            {/* Right side: Two pie charts stacked vertically */}
+            <div className="w-2/4 flex flex-col gap-6">
+              <div className="h-80 rounded p-2 shadow">
+                <h2 className="text-center text-white font-semibold text-lg mb-2">Cache Hit vs Miss</h2>
+                <AccumulationChartComponent {...commonProps}>
+                  <Inject services={[PieSeries, AccumulationTooltip, AccumulationLegend]} />
+                  <AccumulationSeriesCollectionDirective>
+                    <AccumulationSeriesDirective
+                      dataSource={hitBytesByClient}
+                      xName="x"
+                      yName="y"
+                      type="Pie"
+                      dataLabel={{ visible: true, name: 'x' }}
+                      palettes={chartPalette}
+                    />
+                  </AccumulationSeriesCollectionDirective>
+                </AccumulationChartComponent>
+              </div>
 
-        <div className="w-full h-96">
-          <h2 className="text-lg font-semibold mb-2 text-center text-white">Miss Bytes by Service</h2>
-          {missBytesByService.length > 0 && (
-            <AccumulationChartComponent
-              {...commonProps}
-              tooltipRender={(args) => {
-                if (args.point?.y) {
-                  args.text = `${args.point.x}: ${formatBytes(args.point.y)}`;
-                }
-              }}
-            >
-              <Inject services={[PieSeries, AccumulationTooltip, AccumulationLegend]} />
-              <AccumulationSeriesCollectionDirective>
-                <AccumulationSeriesDirective
-                  dataSource={missBytesByService}
-                  xName="x"
-                  yName="y"
-                  type="Pie"
-                  dataLabel={{ visible: true, name: 'x' }}
-                  palettes={chartPalette}
-                />
-              </AccumulationSeriesCollectionDirective>
-            </AccumulationChartComponent>
-          )}
-        </div>
-
-        <div className="w-full h-96">
-          <h2 className="text-lg font-semibold mb-2 text-center text-white">Hit Bytes by Service</h2>
-          {hitBytesByService.length > 0 && (
-            <AccumulationChartComponent
-              {...commonProps}
-              tooltipRender={(args) => {
-                if (args.point?.y) {
-                  args.text = `${args.point.x}: ${formatBytes(args.point.y)}`;
-                }
-              }}
-            >
-              <Inject services={[PieSeries, AccumulationTooltip, AccumulationLegend]} />
-              <AccumulationSeriesCollectionDirective>
-                <AccumulationSeriesDirective
-                  dataSource={hitBytesByService}
-                  xName="x"
-                  yName="y"
-                  type="Pie"
-                  dataLabel={{ visible: true, name: 'x' }}
-                  palettes={chartPalette}
-                />
-              </AccumulationSeriesCollectionDirective>
-            </AccumulationChartComponent>
-          )}
+              <div className="h-80 rounded p-2 shadow">
+                <h2 className="text-center text-white font-semibold text-lg mb-2">Requests by Service</h2>
+                <AccumulationChartComponent {...commonProps}>
+                  <Inject services={[PieSeries, AccumulationTooltip, AccumulationLegend]} />
+                  <AccumulationSeriesCollectionDirective>
+                    <AccumulationSeriesDirective
+                      dataSource={missBytesByClient}
+                      xName="x"
+                      yName="y"
+                      type="Pie"
+                      dataLabel={{ visible: true, name: 'x' }}
+                      palettes={chartPalette}
+                    />
+                  </AccumulationSeriesCollectionDirective>
+                </AccumulationChartComponent>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="container flex flex-wrap items-center gap-4 px-8 py-4 bg-gray-900 rounded-md shadow-md" style={{ width: '100%', marginTop: '0.25rem', padding: '15px', marginBottom: '2rem'}}>
-        <label htmlFor="range" className="text-white font-semibold whitespace-nowrap">
-          Date Range:
-        </label>
+      <div className="container flex flex-wrap items-center gap-4 px-8 py-4 rounded-md shadow-md" style={{ width: '100%', marginTop: '1rem', padding: '15px', marginBottom: '2rem'}}>
+          <label htmlFor="range" className="text-white font-semibold whitespace-nowrap">
+            Date Range:
+          </label>
 
-        <div className="flex items-center gap-2">
-          <select
-            id="range"
-            className="text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-            style={{color: '#ffffff', backgroundColor: '#1a1a1a'}}
-            value={selectedRange}
-            onChange={(e) => setSelectedRange(e.target.value)}
-          >
-            <option value="0">All time</option>
-            <option value="30">Last 30 days</option>
-            <option value="7">Last 7 days</option>
-            <option value="1">Last 1 day</option>
-            <option value="custom">Custom</option>
-          </select>
-
-          {selectedRange === 'custom' && (
-            <input
-              type="number"
-              min={1}
-              max={365}
-              placeholder="Days"
+          <div className="flex items-center gap-2">
+            <select
+              id="range"
               className="text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-              style={{ margin: '0', width: '5rem', color: '#ffffff', backgroundColor: '#1a1a1a' }}
-              value={customDays}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (/^\d{0,3}$/.test(val)) {
-                  setCustomDays(val);
-                }
-              }}
-            />
-          )}
-        </div>
+              style={{color: '#ffffff', backgroundColor: '#1a1a1a'}}
+              value={selectedRange}
+              onChange={(e) => setSelectedRange(e.target.value)}
+            >
+              <option value="0">All time</option>
+              <option value="30">Last 30 days</option>
+              <option value="7">Last 7 days</option>
+              <option value="1">Last 1 day</option>
+              <option value="custom">Custom</option>
+            </select>
 
-        <button
-          className={`ml-auto px-5 py-2 rounded-md font-semibold transition-colors duration-300 ${
-            excludeIPs ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
-          } text-white shadow-md whitespace-nowrap`}
-          onClick={() => setExcludeIPs(!excludeIPs)}
-          type="button"
-        >
-          {excludeIPs ? 'Exclude IPs' : 'Include All IPs'}
-        </button>
-      </div>
+            {selectedRange === 'custom' && (
+              <input
+                type="number"
+                min={1}
+                max={365}
+                placeholder="Days"
+                className="text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                style={{ margin: '0', width: '5rem', color: '#ffffff', backgroundColor: '#1a1a1a' }}
+                value={customDays}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^\d{0,3}$/.test(val)) {
+                    setCustomDays(val);
+                  }
+                }}
+              />
+            )}
+          </div>
+
+          <button
+            className={`ml-auto px-5 py-2 rounded-md font-semibold transition-colors duration-300 ${
+              excludeIPs ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+            } text-white shadow-md whitespace-nowrap`}
+            onClick={() => setExcludeIPs(!excludeIPs)}
+            type="button"
+          >
+            {excludeIPs ? 'Exclude IPs' : 'Include All IPs'}
+          </button>
+        </div>
     </div>
   );
 }
