@@ -1,0 +1,1 @@
+npx concurrently "npm start" "nginx -g 'daemon off;'"

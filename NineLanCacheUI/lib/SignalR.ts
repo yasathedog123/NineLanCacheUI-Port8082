@@ -1,8 +1,8 @@
 import * as signalR from "@microsoft/signalr";
 
 let connection: signalR.HubConnection | null = null;
-let NGINX_URL = process.env.NGINX_URL;
-if (process.env.NODE_ENV === "development") {
+let NGINX_URL: string = "";
+if (process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_API_BASE_URL) {
   NGINX_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 }
 

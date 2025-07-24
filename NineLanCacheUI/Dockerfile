@@ -16,6 +16,9 @@ RUN npm run build
 
 FROM node:22-alpine AS deploy
 
+# Install NGINX
+RUN apk add --no-cache nginx
+
 WORKDIR /app
 COPY --from=build /app/package.json ./
 COPY --from=build /app/package-lock.json ./
@@ -25,6 +28,15 @@ RUN npm ci --only=production
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
 
-EXPOSE 3000
+# Copy custom NGINX config
+COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
+COPY --from=build /app/run.sh ./
 
-CMD ["npm", "start"]
+# Create NGINX run dirs
+RUN mkdir -p /run/nginx
+
+EXPOSE 3000
+EXPOSE 80
+
+RUN chmod +x run.sh 
+CMD ["./run.sh"]

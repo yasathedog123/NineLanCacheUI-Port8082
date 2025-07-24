@@ -13,8 +13,6 @@ import React, { useEffect, useState } from 'react';
 import { getSignalRConnection } from "../../lib/SignalR";
 import * as signalR from "@microsoft/signalr";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
 interface ServiceData {
   service: string;
   totalBytes: number;
@@ -54,7 +52,7 @@ export default function Home() {
 
   const fetchAll = async () => {
       try {
-        const base = `${API_BASE_URL}/Data`;
+        const base = `/api/proxy/Data`;
         const qs = `?days=${debouncedDays}&excludeIPs=${excludeIPs}`;
 
         const [hitMissRes, serviceRes, missRes, hitRes] = await Promise.all([
