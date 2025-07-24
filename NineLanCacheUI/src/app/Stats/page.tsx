@@ -190,7 +190,7 @@ export default function Stats() {
             {/* Right side: Two pie charts stacked vertically */}
             <div className="w-2/4 flex flex-col gap-6">
               <div className="h-80 rounded p-2 shadow">
-                <h2 className="text-center text-white font-semibold text-lg mb-2">Client's Cache Hit</h2>
+                <h2 className="text-center text-white font-semibold text-lg mb-2">Client Cache Hit</h2>
                 <AccumulationChartComponent {...commonProps}>
                   <Inject services={[PieSeries, AccumulationTooltip, AccumulationLegend]} />
                   <AccumulationSeriesCollectionDirective>
@@ -207,7 +207,7 @@ export default function Stats() {
               </div>
 
               <div className="h-80 rounded p-2 shadow">
-                <h2 className="text-center text-white font-semibold text-lg mb-2">Client's Cache Miss</h2>
+                <h2 className="text-center text-white font-semibold text-lg mb-2">Client Cache Miss</h2>
                 <AccumulationChartComponent {...commonProps}>
                   <Inject services={[PieSeries, AccumulationTooltip, AccumulationLegend]} />
                   <AccumulationSeriesCollectionDirective>
