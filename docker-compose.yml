@@ -23,7 +23,7 @@ services:
     image: nginx:latest
     restart: unless-stopped
     ports:
-      - '80:80'
+      - '8080:80'
     volumes:
       - ./Nginx/nginx.conf:/etc/nginx/nginx.conf:ro
   ui:
@@ -33,5 +33,5 @@ services:
       - '7402:3000'
     environment:
       - API_BASE_URL=http://192.168.15.200:7401       
-      - NGINX_URL=http://nginx:80                 
+      - NGINX_URL=http://nginx:8080                 
       - AllowedHosts=*
