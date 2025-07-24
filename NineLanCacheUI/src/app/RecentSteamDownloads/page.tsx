@@ -89,7 +89,7 @@ const PreloadableImage = ({ appId, onReady }: { appId: number, onReady: () => vo
 
 
 
-export default function RecentDownloads() {
+export default function RecentSteamDownloads() {
   const gridRef = useRef<GridComponent | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedRange, setSelectedRange] = useState<string>("0");
@@ -107,7 +107,7 @@ export default function RecentDownloads() {
       params.append("excludeIPs", excludeIPs.toString());
       params.append("limit", "100");
 
-      const res = await fetch(`/api/proxy/RecentDownloads/GetRecentDownloads?${params.toString()}`);
+      const res = await fetch(`/api/proxy/RecentDownloads/GetRecentSteamDownloads?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch data");
 
       const newData: DownloadEvent[] = await res.json();
@@ -154,7 +154,7 @@ export default function RecentDownloads() {
       params.append("excludeIPs", excludeIPs.toString());
       params.append("limit", "20");
 
-      const res = await fetch(`/api/proxy/RecentDownloads/GetRecentDownloads?${params.toString()}`);
+      const res = await fetch(`/api/proxy/RecentDownloads/GetRecentSteamDownloads?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch new data");
 
       const newData: DownloadEvent[] = await res.json();
@@ -285,7 +285,6 @@ export default function RecentDownloads() {
         >
             <ColumnsDirective>
             <ColumnDirective field="id" headerText="ID" width={80} visible={false} />
-            <ColumnDirective field="cacheIdentifier" headerText="Service" width={100} textAlign="Left" />
             <ColumnDirective
                 headerText="Timestamp"
                 width={180}
@@ -371,6 +370,37 @@ export default function RecentDownloads() {
                 );
                 }}
             />
+            <ColumnDirective
+              headerText="Download Progress"
+              width={200}
+              template={(props: DownloadEvent) => {
+                const totalBytes = props.totalBytes ?? 0;
+                const downloaded = (props.cacheMissBytes ?? 0) + (props.cacheHitBytes ?? 0);
+
+                if (totalBytes === 0) {
+                  return <span className="text-red-400 text-sm">Could not find Steam Manifest</span>;
+                }
+
+                const percent = Math.min((downloaded / totalBytes) * 100, 100);
+                const formattedDownloaded = formatBytes(downloaded);
+                const formattedTotal = formatBytes(totalBytes);
+
+                const progressString =
+                  percent < 100
+                    ? `${formattedDownloaded} / ${formattedTotal} (${percent.toFixed(1)}%)`
+                    : `${formattedDownloaded} (100%)`;
+
+                return (
+                  <div className="w-full">
+                    <div className="h-4 bg-gray-700 rounded overflow-hidden">
+                      <div className="h-full bg-blue-500" style={{ width: `${percent}%` }}></div>
+                    </div>
+                    <div className="text-xs mt-1 text-white text-center">{progressString}</div>
+                  </div>
+                );
+              }}
+            />
+
             </ColumnsDirective>
             <Inject services={[Toolbar, VirtualScroll, Filter, Sort ]} />
         </GridComponent>
