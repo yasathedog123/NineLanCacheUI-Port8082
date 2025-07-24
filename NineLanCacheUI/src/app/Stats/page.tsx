@@ -218,7 +218,14 @@ export default function Stats() {
             <div className="w-2/4 flex flex-col gap-6">
               <div className="h-80 rounded p-2 shadow">
                 <h2 className="text-center text-white font-semibold text-lg mb-2">Client Cache Hit</h2>
-                <AccumulationChartComponent {...commonProps}>
+                <AccumulationChartComponent
+                  {...commonProps}
+                  tooltipRender={(args) => {
+                    if (args.point?.y) {
+                      args.text = `${args.point.x}: ${formatBytes(args.point.y)}`;
+                    }
+                  }}
+                >
                   <Inject services={[PieSeries, AccumulationTooltip, AccumulationLegend]} />
                   <AccumulationSeriesCollectionDirective>
                     <AccumulationSeriesDirective
@@ -235,7 +242,14 @@ export default function Stats() {
 
               <div className="h-80 rounded p-2 shadow">
                 <h2 className="text-center text-white font-semibold text-lg mb-2">Client Cache Miss</h2>
-                <AccumulationChartComponent {...commonProps}>
+                <AccumulationChartComponent
+                  {...commonProps}
+                  tooltipRender={(args) => {
+                    if (args.point?.y) {
+                      args.text = `${args.point.x}: ${formatBytes(args.point.y)}`;
+                    }
+                  }}
+                >
                   <Inject services={[PieSeries, AccumulationTooltip, AccumulationLegend]} />
                   <AccumulationSeriesCollectionDirective>
                     <AccumulationSeriesDirective
