@@ -18,6 +18,12 @@ interface ServiceData {
   totalBytes: number;
 }
 
+type Filters = {
+  selectedRange?: string;
+  customDays?: number;
+  excludeIPs?: string[];
+};
+
 const FILTER_KEY = "globalFilters";
 
 function getStoredFilters() {
@@ -31,7 +37,7 @@ function getStoredFilters() {
   }
 }
 
-function setStoredFilters(filters: any) {
+function setStoredFilters(filters: Filters) {
   localStorage.setItem(FILTER_KEY, JSON.stringify(filters));
 }
 
