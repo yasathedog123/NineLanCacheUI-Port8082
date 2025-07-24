@@ -40,6 +40,7 @@ namespace NineLanCacheUI_API.Controllers
             var steamApps = appIds
                 .Select(id => _steamAppObtainerService.GetSteamAppById(id))
                 .Where(app => app != null)
+                .OrderBy(app => app.name)
                 .ToList();
 
             return Ok(steamApps);
