@@ -10,6 +10,8 @@ import {
 } from '@syncfusion/ej2-react-charts';
 import { formatBytes, chartPalette } from "../../lib/Utilities";
 import React, { useEffect, useState } from 'react';
+import { getSignalRConnection } from "../../lib/SignalR";
+import * as signalR from "@microsoft/signalr";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -50,8 +52,7 @@ export default function Home() {
   }
   const debouncedDays = useDebounce(daysToUse, 400);
 
-  useEffect(() => {
-    const fetchAll = async () => {
+  const fetchAll = async () => {
       try {
         const base = `${API_BASE_URL}/Data`;
         const qs = `?days=${debouncedDays}&excludeIPs=${excludeIPs}`;
@@ -83,8 +84,37 @@ export default function Home() {
       }
     };
 
+  useEffect(() => {
     fetchAll();
   }, [debouncedDays, excludeIPs]);
+
+  useEffect(() => {
+    const connection = getSignalRConnection();
+
+    async function start() {
+      try {
+        if (connection.state === signalR.HubConnectionState.Disconnected) {
+          await connection.start();
+        }
+        console.log('SignalR connected.');
+      } catch (err) {
+        console.error('SignalR connection error:', err);
+        setTimeout(start, 2000); // retry on fail
+      }
+    }
+
+    connection.on("UpdateDownloadEvents", () => {
+      fetchAll();
+
+    });
+
+    start();
+
+    return () => {
+      connection.off("UpdateDownloadEvents");
+      connection.stop();
+    };
+  }, []);
 
   const commonProps = {
     legendSettings: {

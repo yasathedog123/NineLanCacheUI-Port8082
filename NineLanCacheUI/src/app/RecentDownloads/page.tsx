@@ -13,6 +13,9 @@ import {
 } from "@syncfusion/ej2-react-grids";
 
 import { formatBytes } from "../../../lib/Utilities";
+import { getSignalRConnection } from "../../../lib/SignalR";
+import { startTransition } from 'react';
+import * as signalR from "@microsoft/signalr";
 
 interface SteamDepot {
   id: number;
@@ -36,83 +39,170 @@ interface DownloadEvent {
   steamDepot?: SteamDepot | null;
 }
 
-function SteamImage({ appId }: { appId: number }) {
-    const [imageError, setImageError] = useState(false);
+const SteamImage = React.memo(({ appId }: { appId: number }) => {
+  const [imageError, setImageError] = useState(false);
+  const imageUrl = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
+  const fallbackUrl = "https://steamdb.info/static/img/applogo.svg";
 
-    const imageUrl = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
-    const fallbackUrl = "https://steamdb.info/static/img/applogo.svg";
+  return (
+    <div className="flex items-center justify-center">
+      <a
+        href={`https://steamdb.info/app/${appId}/`}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {imageError ? (
+          <object
+            data={fallbackUrl}
+            type="image/svg+xml"
+            width="200"
+            height="100"
+          >
+            Steam App
+          </object>
+        ) : (
+          <img
+            src={imageUrl}
+            alt={`App ${appId}`}
+            className="w-[200px] h-[75px] object-cover rounded shadow bg-gray-900"
+            onError={() => setImageError(true)}
+          />
+        )}
+      </a>
+    </div>
+  );
+});
+SteamImage.displayName = "SteamImage";
 
-    return (
-        <div className="flex items-center justify-center">
-        <a
-            href={`https://steamdb.info/app/${appId}/`}
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            {imageError ? (
-                <object
-                    data={fallbackUrl}
-                    type="image/svg+xml"
-                    width="200"
-                    height="100"
-                >
-                    Steam App
-                </object>
-            ) : (
-                <img
-                    src={imageUrl}
-                    alt={`App ${appId}`}
-                    className="w-[200px] h-auto rounded shadow"
-                    onError={() => setImageError(true)}
-                />
-            )}
-        </a>
-        </div>
-    );
-}
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 export default function RecentDownloads() {
   const [data, setData] = useState<DownloadEvent[]>([]);
+  const [stagedData, setStagedData] = useState<DownloadEvent[] | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Filters state
   const [selectedRange, setSelectedRange] = useState<string>("0");
   const [customDays, setCustomDays] = useState<string>("");
   const [excludeIPs, setExcludeIPs] = useState<boolean>(true);
 
-  // Calculate effective days based on selection
   const days =
     selectedRange === "custom" ? parseInt(customDays) || 0 : parseInt(selectedRange);
 
-  // Fetch data
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      try {
+  async function fetchData() {
+    setLoading(true);
+    try {
         const params = new URLSearchParams();
         if (days > 0) params.append("days", days.toString());
         params.append("excludeIPs", excludeIPs.toString());
+        params.append("limit", "100");
 
         const res = await fetch(`${API_BASE_URL}/RecentDownloads/GetRecentDownloads?${params.toString()}`);
         if (!res.ok) throw new Error("Failed to fetch data");
-        const json = await res.json();
-        setData(json);
-      } catch (error) {
-        console.error(error);
-        setData([]);
-      } finally {
-        setLoading(false);
-      }
-    }
 
+        const json = await res.json();
+
+        // Buffer the data first
+        setStagedData(json);
+    } catch (error) {
+        console.error(error);
+        setStagedData([]);
+    } finally {
+        setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (stagedData !== null) {
+        const existingIds = new Set(data.map(d => d.id));
+        const stagedIds = new Set(stagedData.map(d => d.id));
+
+        const isSameLength = data.length === stagedData.length;
+        const hasChanges = [...stagedIds].some(id => !existingIds.has(id));
+
+        if (!isSameLength || hasChanges) {
+        startTransition(() => {
+            setData(stagedData);
+            setStagedData(null);
+        });
+        }
+    }
+  }, [stagedData]);
+
+
+
+  async function fetchAndMergeNewData() {
+    try {
+        const params = new URLSearchParams();
+        if (days > 0) params.append("days", days.toString());
+        params.append("excludeIPs", excludeIPs.toString());
+        params.append("limit", "20");
+
+        const res = await fetch(`${API_BASE_URL}/RecentDownloads/GetRecentDownloads?${params.toString()}`);
+        if (!res.ok) throw new Error("Failed to fetch new data");
+
+        const newData: DownloadEvent[] = await res.json();
+
+        startTransition(() => {
+            setData(prevData => {
+                const updated = [...prevData];
+
+                newData.forEach(item => {
+                    const index = updated.findIndex(d => d.id === item.id);
+                    if (index >= 0) {
+                        updated[index] = item;
+                    } else {
+                        updated.unshift(item);
+                    }
+                });
+
+                // Only sort if new items were added or updated
+                return updated
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .slice(0, 100);
+            });
+        });
+    } catch (error) {
+        console.error("Failed to fetch and merge new data", error);
+    }
+  }
+
+
+  useEffect(() => {
     fetchData();
   }, [days, excludeIPs]);
 
+  useEffect(() => {
+    const connection = getSignalRConnection();
+
+    async function start() {
+      try {
+        if (connection.state === signalR.HubConnectionState.Disconnected) {
+            await connection.start();
+        }
+        console.log("SignalR connected.");
+      } catch (err) {
+        console.error("SignalR connection error:", err);
+        setTimeout(start, 2000);
+      }
+    }
+
+    connection.on("UpdateDownloadEvents", () => {
+      console.log("Received UpdateDownloadEvents");
+      fetchAndMergeNewData();
+    });
+
+    start();
+
+    return () => {
+      connection.off("UpdateDownloadEvents");
+      connection.stop();
+    };
+  }, []);
+
   return (
     <div className="p-6 mx-auto rounded-3xl" style={{ backgroundColor: "#1a1a1a", color: "#eee", width: "95%" }}>
-      <h1 className="text-3xl font-bold mb-6">Recent Downloads</h1>
+      <h1 className="text-4xl font-bold mb-6 text-center">Recent Downloads</h1>
 
       {/* Filter Panel */}
       <div
@@ -165,140 +255,118 @@ export default function RecentDownloads() {
           {excludeIPs ? "Exclude IPs" : "Include All IPs"}
         </button>
       </div>
-
-      {/* Syncfusion Grid */}
-      <GridComponent
-        dataSource={data}
-        allowPaging={false}
-        allowSorting={true}
-        allowFiltering={true}
-        filterSettings={{ type: "Menu" }}
-        pageSettings={{ pageSize: 20 }}
-        height={'60vh'}
-        rowSelected={() => {}}
-      >
-        <ColumnsDirective>
-          <ColumnDirective
-            field="id"
-            headerText="ID"
-            width={80}
-            textAlign="Right"
-            visible={false} // Usually ID hidden
-          />
-          <ColumnDirective
-            field="cacheIdentifier"
-            headerText="Service"
-            width={100}
-            textAlign="Left"
-          />
-          <ColumnDirective
-            headerText="Timestamp"
-            width={180}
-            template={(props: DownloadEvent) => {
+      
+      {/* {loading && (
+        <div className="grid grid-cols-3 gap-4 mb-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-[100px] rounded animate-pulse col-span-3" />
+            ))}
+        </div>
+        )} */}
+      <div className={`transition-opacity duration-300 ${loading ? "opacity-50" : "opacity-100"}`}>
+        {/* Grid */}
+        <GridComponent
+            dataSource={data}
+            allowPaging={false}
+            allowSorting={true}
+            allowFiltering={true}
+            filterSettings={{ type: "Menu" }}
+            height={"60vh"}
+            rowSelected={() => {}}
+            style={{ minHeight: "500px" }}
+        >
+            <ColumnsDirective>
+            <ColumnDirective field="id" headerText="ID" width={80} visible={false} />
+            <ColumnDirective field="cacheIdentifier" headerText="Service" width={100} textAlign="Left" />
+            <ColumnDirective
+                headerText="Timestamp"
+                width={180}
+                template={(props: DownloadEvent) => {
                 const created = new Date(props.createdAt);
                 const updated = new Date(props.lastUpdatedAt);
-
                 const formatDateTime = (date: Date) =>
-                `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                })}`;
+                    `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
 
                 return (
-                <div className="text-sm text-white leading-tight text-center whitespace-normal break-words w-full">
-                    <div>{formatDateTime(created)} → {formatDateTime(updated)}</div>
-                </div>
+                    <div className="text-sm text-white text-center whitespace-normal break-words">
+                     <div>{formatDateTime(created)} → {formatDateTime(updated)}</div>
+                    </div>
                 );
-            }}
-          />
-
-         <ColumnDirective
-            headerText="App"
-            width={140}
-            template={(props: DownloadEvent) => {
-                const appId = props.steamDepot?.steamAppId;
-
-                if (props.cacheIdentifier === "steam" && appId !== undefined) {
-                return <SteamImage appId={appId} />;
-                }
-
-                return <span className="text-sm text-gray-300">unknown</span>;
-            }}
+                }}
             />
-
             <ColumnDirective
-            headerText="Depot"
-            width={120}
-            template={(props: DownloadEvent) => {
+                headerText="App"
+                width={140}
+                template={(props: DownloadEvent) => {
+                const appId = props.steamDepot?.steamAppId;
+                return props.cacheIdentifier === "steam" && appId
+                    ? <SteamImage appId={appId} />
+                    : <span className="text-sm text-gray-300">unknown</span>;
+                }}
+            />
+            <ColumnDirective
+                headerText="Depot"
+                width={120}
+                template={(props: DownloadEvent) => {
                 if (props.cacheIdentifier === "steam") {
-                const depotLink = `https://steamdb.info/depot/${props.steamDepot?.id}/`;
-                return (
+                    const depotLink = `https://steamdb.info/depot/${props.steamDepot?.id}/`;
+                    return (
                     <a
                         href={depotLink}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-400 hover:underline text-sm"
                     >
-                    {props.steamDepot?.id}
+                        {props.steamDepot?.id}
                     </a>
-                );
+                    );
                 }
                 return <span className="text-sm text-gray-300">N/A</span>;
-            }}
+                }}
             />
-
-          <ColumnDirective field="clientIp" headerText="Client IP" width={130} textAlign="Left" />
-          <ColumnDirective
-            headerText="Hit %"
-            width={150}
-            template={(props: DownloadEvent) => {
+            <ColumnDirective field="clientIp" headerText="Client IP" width={130} textAlign="Left" />
+            <ColumnDirective
+                headerText="Hit %"
+                width={150}
+                template={(props: DownloadEvent) => {
                 const total = props.cacheHitBytes + props.cacheMissBytes;
-                const hit = props.cacheHitBytes;
-                const hitPercent = total > 0 ? (hit / total) * 100 : 0;
+                const hitPercent = total > 0 ? (props.cacheHitBytes / total) * 100 : 0;
 
                 return (
-                <div className="w-full">
-                    <div className="h-4 bg-gray-700 rounded relative overflow-hidden">
-                    <div
-                        className="h-full bg-green-500"
-                        style={{ width: `${hitPercent}%` }}
-                    ></div>
+                    <div className="w-full">
+                    <div className="h-4 bg-gray-700 rounded overflow-hidden">
+                        <div className="h-full bg-green-500" style={{ width: `${hitPercent}%` }}></div>
                     </div>
                     <div className="text-xs mt-1 text-white text-center">
-                    {formatBytes(hit)} • {hitPercent.toFixed(1)}%
+                        {formatBytes(props.cacheHitBytes)} • {hitPercent.toFixed(1)}%
                     </div>
-                </div>
+                    </div>
                 );
-            }}
+                }}
             />
-
-         <ColumnDirective
-            headerText="Miss %"
-            width={150}
-            template={(props: DownloadEvent) => {
+            <ColumnDirective
+                headerText="Miss %"
+                width={150}
+                template={(props: DownloadEvent) => {
                 const total = props.cacheHitBytes + props.cacheMissBytes;
-                const miss = props.cacheMissBytes;
-                const missPercent = total > 0 ? (miss / total) * 100 : 0;
+                const missPercent = total > 0 ? (props.cacheMissBytes / total) * 100 : 0;
 
                 return (
-                <div className="w-full">
-                    <div className="h-4 bg-gray-700 rounded relative overflow-hidden">
-                    <div
-                        className="h-full bg-red-500"
-                        style={{ width: `${missPercent}%` }}
-                    ></div>
+                    <div className="w-full">
+                    <div className="h-4 bg-gray-700 rounded overflow-hidden">
+                        <div className="h-full bg-red-500" style={{ width: `${missPercent}%` }}></div>
                     </div>
                     <div className="text-xs mt-1 text-white text-center">
-                    {formatBytes(miss)} • {missPercent.toFixed(1)}%
+                        {formatBytes(props.cacheMissBytes)} • {missPercent.toFixed(1)}%
                     </div>
-                </div>
+                    </div>
                 );
-            }}
-          />
-        </ColumnsDirective>
-        <Inject services={[Toolbar]} />
-      </GridComponent>
+                }}
+            />
+            </ColumnsDirective>
+            <Inject services={[Toolbar]} />
+        </GridComponent>
+      </div>
     </div>
   );
 }

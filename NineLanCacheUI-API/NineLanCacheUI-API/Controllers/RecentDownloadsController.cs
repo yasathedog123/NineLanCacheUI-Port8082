@@ -26,7 +26,7 @@ namespace NineLanCacheUI_API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetRecentDownloads([FromQuery] int days = 0, [FromQuery] bool excludeIPs = true)
+        public async Task<IActionResult> GetRecentDownloads([FromQuery] int days = 0, [FromQuery] bool excludeIPs = true, [FromQuery] int limit = 0)
         {
             var excludedIps = excludeIPs
                 ? await _context.ExcludedIps.Select(x => x.IpAddress.Trim()).ToArrayAsync()
@@ -50,9 +50,10 @@ namespace NineLanCacheUI_API.Controllers
             // Only include events with cache hits or misses
             queryableEvents = queryableEvents.Where(e => e.CacheHitBytes != 0 || e.CacheMissBytes != 0);
 
+            int takeNumber = limit > 0 ? limit : 100;
             var recentEventsSubquery = queryableEvents
                 .OrderByDescending(e => e.LastUpdatedAt)
-                .Take(100);
+                .Take(takeNumber);
 
             var joined = from e in recentEventsSubquery
                          join depot in _context.SteamDepots
