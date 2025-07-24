@@ -14,9 +14,9 @@ namespace NineLanCacheUI_API.Controllers
     [ApiController]
     public class SettingsController : ControllerBase
     {
-        private readonly ILogger<DataController> _logger;
+        private readonly ILogger<SettingsController> _logger;
         private readonly NineLanCacheUIDBContext _context;
-        public SettingsController(ILogger<DataController> logger, NineLanCacheUIDBContext context)
+        public SettingsController(ILogger<SettingsController> logger, NineLanCacheUIDBContext context)
         {
             _logger = logger;
             _context = context;

@@ -244,3 +244,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   /* font-size: 100px;
   content: "⏭"!important; */
 }
+
+.e-control.e-pager.e-lib{
+  background-color: #121212 !important;
+  color: #ffffff !important;
+  border: 0;
+}

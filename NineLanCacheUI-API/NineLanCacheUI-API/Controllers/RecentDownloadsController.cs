@@ -15,10 +15,10 @@ namespace NineLanCacheUI_API.Controllers
     [ApiController]
     public class RecentDownloadsController : ControllerBase
     {
-        private readonly ILogger<DataController> _logger;
+        private readonly ILogger<RecentDownloadsController> _logger;
         private readonly NineLanCacheUIDBContext _context;
         private readonly ISteamAppObtainerService _steamAppObtainerService;
-        public RecentDownloadsController(ILogger<DataController> logger, NineLanCacheUIDBContext context, ISteamAppObtainerService steamAppObtainerService)
+        public RecentDownloadsController(ILogger<RecentDownloadsController> logger, NineLanCacheUIDBContext context, ISteamAppObtainerService steamAppObtainerService)
         {
             _logger = logger;
             _context = context;

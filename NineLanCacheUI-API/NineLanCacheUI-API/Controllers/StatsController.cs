@@ -13,9 +13,9 @@ namespace NineLanCacheUI_API.Controllers
     [ApiController]
     public class StatsController : ControllerBase
     {
-        private readonly ILogger<DataController> _logger;
+        private readonly ILogger<StatsController> _logger;
         private readonly NineLanCacheUIDBContext _context;
-        public StatsController(ILogger<DataController> logger, NineLanCacheUIDBContext context)
+        public StatsController(ILogger<StatsController> logger, NineLanCacheUIDBContext context)
         {
             _logger = logger;
             _context = context;
