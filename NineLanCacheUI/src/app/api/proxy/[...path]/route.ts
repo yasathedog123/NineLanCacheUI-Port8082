@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const API_BASE_URL = process.env.API_BASE_URL;
-if (!API_BASE_URL) {
-  throw new Error("API_BASE_URL not configured");
-}
-
 type RouteContext = {
   params: Promise<{ path: string[] }>;
   searchParams: URLSearchParams;
@@ -39,6 +34,11 @@ async function proxyRequest(
   params: { path: string[] },
   method: string
 ) {
+  const API_BASE_URL = process.env.API_BASE_URL;
+  if (!API_BASE_URL) {
+    throw new Error("API_BASE_URL not configured");
+  }
+
   const pathSegments = params.path;
 
   if (!pathSegments || pathSegments.length === 0) {
@@ -46,13 +46,11 @@ async function proxyRequest(
   }
 
   try {
-    // Compose URL with query string if GET
     const url = new URL(`${API_BASE_URL}/${pathSegments.join("/")}`);
     if (method === "GET") {
       url.search = req.nextUrl.search;
     }
 
-    // Filter headers (removes disallowed ones)
     const filteredHeaders = filterHeaders(req.headers);
 
     const fetchOptions: RequestInit = {
@@ -64,9 +62,7 @@ async function proxyRequest(
       fetchOptions.body = await req.text();
     }
 
-    // Direct fetch without protectedProxyRequest
     const response = await fetch(url.toString(), fetchOptions);
-
     const contentType = response.headers.get("content-type");
 
     if (contentType?.includes("application/json")) {
