@@ -15,7 +15,6 @@ import {
 
 import { formatBytes } from "../../../lib/Utilities";
 import { getSignalRConnection } from "../../../lib/SignalR";
-import { startTransition } from 'react';
 import * as signalR from "@microsoft/signalr";
 import { useRef } from "react";
 
@@ -90,9 +89,6 @@ const PreloadableImage = ({ appId, onReady }: { appId: number, onReady: () => vo
 
 
 
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-
 export default function RecentDownloads() {
   const gridRef = useRef<GridComponent | null>(null);
   const [loading, setLoading] = useState(false);
@@ -111,7 +107,7 @@ export default function RecentDownloads() {
       params.append("excludeIPs", excludeIPs.toString());
       params.append("limit", "100");
 
-      const res = await fetch(`${API_BASE_URL}/RecentDownloads/GetRecentDownloads?${params.toString()}`);
+      const res = await fetch(`/api/proxy/RecentDownloads/GetRecentDownloads?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch data");
 
       const newData: DownloadEvent[] = await res.json();
@@ -158,7 +154,7 @@ export default function RecentDownloads() {
       params.append("excludeIPs", excludeIPs.toString());
       params.append("limit", "20");
 
-      const res = await fetch(`${API_BASE_URL}/RecentDownloads/GetRecentDownloads?${params.toString()}`);
+      const res = await fetch(`/api/proxy/RecentDownloads/GetRecentDownloads?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch new data");
 
       const newData: DownloadEvent[] = await res.json();

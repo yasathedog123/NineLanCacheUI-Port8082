@@ -7,8 +7,6 @@ function isValidIp(ip: string) {
   return /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/.test(ip);
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
 export default function SettingsPage() {
   const [excludedIps, setExcludedIps] = useState<string[]>([]);
   const [newIp, setNewIp] = useState("");
@@ -20,7 +18,7 @@ export default function SettingsPage() {
     async function fetchIps() {
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE_URL}/Settings/GetExcludedIps`);
+        const res = await fetch(`/api/proxy/Settings/GetExcludedIps`);
         const data = await res.json();
         setExcludedIps(data || []);
       } catch {
@@ -40,7 +38,7 @@ export default function SettingsPage() {
     setError(null);
     setAdding(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/Settings/AddExcludedIp`, {
+      const res = await fetch(`/api/proxy/Settings/AddExcludedIp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ip: newIp.trim() }),
@@ -62,7 +60,7 @@ export default function SettingsPage() {
 
   const removeIp = async (ipToRemove: string) => {
     try {
-        const res = await fetch(`${API_BASE_URL}/Settings/DeleteExcludedIp`, {
+        const res = await fetch(`/api/proxy/Settings/DeleteExcludedIp`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ip: ipToRemove }),
