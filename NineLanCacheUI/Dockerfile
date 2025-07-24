@@ -29,7 +29,7 @@ COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
 
 # Copy custom NGINX config
-COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
+COPY ./nginx.conf /etc/nginx/nginx.conf
 COPY --from=build /app/run.sh ./
 
 # Create NGINX run dirs
