@@ -54,8 +54,8 @@ export default function RootLayout({
                    <Link href="/RecentSteamDownloads" className="mr-5 hover:text-gray-900">
                     Recent Steam Downloads
                   </Link>
-                  <Link href="/GamesDownloaded" className="mr-5 hover:text-gray-900">
-                    Games Downloaded
+                  <Link href="/SteamGamesDownloaded" className="mr-5 hover:text-gray-900">
+                    Steam Games Downloaded
                   </Link>
                   <Link href="/Stats" className="mr-5 hover:text-gray-900">
                     Stats

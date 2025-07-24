@@ -11,6 +11,7 @@ namespace NineLanCacheUI_API.Data.Tables
         public required string CacheIdentifier { get; set; }
 
         public uint? DownloadIdentifier { get; set; }
+
         public string? DownloadIdentifierString { get; set; }
 
         public required string ClientIp { get; set; }

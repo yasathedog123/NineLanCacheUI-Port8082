@@ -2,7 +2,6 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NineLanCacheUI_API.Data;
@@ -12,52 +11,46 @@ using NineLanCacheUI_API.Data;
 namespace NineLanCacheUI_API.Migrations
 {
     [DbContext(typeof(NineLanCacheUIDBContext))]
-    [Migration("20250723192518_AddExcludedIps")]
-    partial class AddExcludedIps
+    [Migration("20250724033815_SQLite")]
+    partial class SQLite
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.7")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
-
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.7");
 
             modelBuilder.Entity("NineLanCacheUI_API.Data.Tables.DbDownloadEvent", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("CacheHitBytes")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("CacheIdentifier")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("CacheMissBytes")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ClientIp")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
-                    b.Property<long?>("DownloadIdentifier")
-                        .HasColumnType("bigint");
+                    b.Property<uint?>("DownloadIdentifier")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("DownloadIdentifierString")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("LastUpdatedAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -72,13 +65,11 @@ namespace NineLanCacheUI_API.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("IpAddress")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -91,10 +82,10 @@ namespace NineLanCacheUI_API.Migrations
             modelBuilder.Entity("NineLanCacheUI_API.Data.Tables.DbSetting", b =>
                 {
                     b.Property<string>("Key")
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Value")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Key");
 
@@ -103,11 +94,11 @@ namespace NineLanCacheUI_API.Migrations
 
             modelBuilder.Entity("NineLanCacheUI_API.Data.Tables.DbSteamDepot", b =>
                 {
-                    b.Property<long>("SteamDepotId")
-                        .HasColumnType("bigint");
+                    b.Property<uint>("SteamDepotId")
+                        .HasColumnType("INTEGER");
 
-                    b.Property<long>("SteamAppId")
-                        .HasColumnType("bigint");
+                    b.Property<uint>("SteamAppId")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("SteamDepotId", "SteamAppId");
 
@@ -116,24 +107,24 @@ namespace NineLanCacheUI_API.Migrations
 
             modelBuilder.Entity("NineLanCacheUI_API.Data.Tables.DbSteamManifest", b =>
                 {
-                    b.Property<long>("DepotId")
-                        .HasColumnType("bigint");
+                    b.Property<uint>("DepotId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreationTime")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("TEXT");
 
-                    b.Property<decimal>("ManifestBytesSize")
-                        .HasColumnType("decimal(20,0)");
+                    b.Property<ulong>("ManifestBytesSize")
+                        .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("TotalCompressedSize")
-                        .HasColumnType("decimal(20,0)");
+                    b.Property<ulong>("TotalCompressedSize")
+                        .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("TotalUncompressedSize")
-                        .HasColumnType("decimal(20,0)");
+                    b.Property<ulong>("TotalUncompressedSize")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("UniqueManifestIdentifier")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("DepotId", "CreationTime");
 

@@ -8,6 +8,8 @@ using NineLanCacheUI_API.Steam;
 using NineLanCacheUI_API.Services.OriginalDepotEnricher;
 using Microsoft.AspNetCore.ResponseCompression;
 using NineLanCacheUI_API.Hubs;
+using Microsoft.AspNetCore.Rewrite;
+using NineLanCacheUI_API.Helpers;
 namespace NineLanCacheUI_API
 {
     public class Program
@@ -23,9 +25,36 @@ namespace NineLanCacheUI_API
             }
 
             // Add services to the container.
-            var connectionString = builder.Configuration.GetConnectionString("NineLanCacheUIContextConnection");
+            //var connectionString = builder.Configuration.GetConnectionString("NineLanCacheUIContextConnection");
+            //builder.Services.AddDbContext<NineLanCacheUIDBContext>(options =>
+            //    options.UseSqlServer(connectionString));
+
+            var conString = builder.Configuration.GetConnectionString("DefaultConnection");
+            var conStringReplaced = conString?.Replace("{LanCacheUIDataDirectory}", lanCacheUIDataDirectory ?? "");
+
+            try
+            {
+                var sqliteFileName = SqliteFolderCreator.GetFileNameFromSqliteConnectionString(conStringReplaced);
+
+                var invalidPathChars = Path.GetInvalidPathChars();
+                if (!string.IsNullOrWhiteSpace(sqliteFileName) && sqliteFileName.All(t => !invalidPathChars.Any(z => t == z)))
+                {
+                    var parent = Path.GetDirectoryName(sqliteFileName);
+                    if (!string.IsNullOrWhiteSpace(parent) && !Directory.Exists(parent))
+                    {
+                        Directory.CreateDirectory(parent);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error while creating subfolder for database, exception: {ex}");
+            }
+
             builder.Services.AddDbContext<NineLanCacheUIDBContext>(options =>
-                options.UseSqlServer(connectionString));
+            {
+                options.UseSqlite(conStringReplaced);
+            });
 
             builder.Services.AddControllers(options =>
             {
@@ -85,11 +114,26 @@ namespace NineLanCacheUI_API
 
             var app = builder.Build();
 
+            app.UseResponseCompression();
+
+            // Applying migrations
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<NineLanCacheUIDBContext>();
+                Console.WriteLine("Migrating DB (ensure the database folder from the query string exists)...");
+                dbContext.Database.Migrate();
+                Console.WriteLine("DB migration completed");
+            }
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
             }
+
+            var option = new RewriteOptions();
+            option.AddRedirect("^$", "swagger");
+            app.UseRewriter(option);
 
             app.UseSwagger();
             app.UseSwaggerUI();

@@ -196,3 +196,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .e-headercelldiv{
   text-align: center !important;
 }
+
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
