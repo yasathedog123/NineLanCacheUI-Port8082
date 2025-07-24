@@ -108,7 +108,7 @@ export default function SteamGamesPage() {
   }, [filterText]);
 
   return (
-    <div className="p-8">
+    <div className="p-8 mx-auto" style={{ width: "95%"}}>
         <div className="mb-4 flex items-center gap-2" style={{ maxWidth: "25%", minWidth: "200px" }}>
             <input
                 type="text"
