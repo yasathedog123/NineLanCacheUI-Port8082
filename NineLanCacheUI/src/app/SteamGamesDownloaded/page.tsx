@@ -43,10 +43,11 @@ const PreloadableImage = ({
   return (
     <div className="flex items-center justify-center">
       <a
-        className="w-full h-full"
+        className="flex w-full h-full align-items-center justify-center"
         href={`https://steamdb.info/app/${appId}/`}
         target="_blank"
         rel="noopener noreferrer"
+        style={{maxHeight: "215px"}}
       >
         {status.error ? (
           <svg
@@ -171,7 +172,7 @@ export default function SteamGamesPage() {
         )}
         </div>
 
-        <div className="mt-8 flex justify-center">
+        <div className="mt-8 flex justify-center " style={{ position:"revert"}}>
         <PagerComponent
             currentPage={currentPage}
             totalRecordsCount={filteredGames.length}

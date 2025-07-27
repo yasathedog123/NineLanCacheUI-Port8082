@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
-import '@syncfusion/ej2-base/styles/material.css';
-import '@syncfusion/ej2-react-grids/styles/material.css';
-//import '@syncfusion/ej2-react-charts/styles/material.css';
 
 export const metadata: Metadata = {
   title: "Nine LanCache UI",

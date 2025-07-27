@@ -223,26 +223,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: #ffffff !important;
 }
 
-.e-grid .e-gridpager .e-prevpage::before {
-  content: "⏴";
-}
-.e-grid .e-gridpager .e-firstpage::before {
-  content: "⏮";
-}
-.e-grid .e-gridpager .e-nextpage::before {
-  content: "⏵";
-}
-.e-grid .e-gridpager .e-lastpage::before {
-  content: "⏭";
-}
-
-.e-grid .e-gridpager .e-prevpagedisabled,
-.e-grid .e-gridpager .e-firstpagedisabled,
-.e-grid .e-gridpager .e-nextpagedisabled,
-.e-grid .e-gridpager .e-lastpagedisabled {
-  display: none !important;
-  /* font-size: 100px;
-  content: "⏭"!important; */
+/* Force Syncfusion icons to display properly */
+.e-icons,
+.e-icons::before {
+  font-family: "e-icons" !important; /* Syncfusion icon font family */
+  
 }
 
 .e-control.e-pager.e-lib{
