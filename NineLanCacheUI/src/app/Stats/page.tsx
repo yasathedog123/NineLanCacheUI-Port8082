@@ -9,7 +9,7 @@ import {
   AccumulationLegend
 } from '@syncfusion/ej2-react-charts';
 import { formatBytes, chartPalette } from "../../../lib/Utilities";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getSignalRConnection, startConnection, stopConnection } from "../../../lib/SignalR";
 import {
   GridComponent,
@@ -100,51 +100,49 @@ export default function Stats() {
   }
   const debouncedDays = useDebounce(daysToUse, 400);
 
-  const fetchAll = async () => {
-      try {
-        const base = `/api/proxy/Stats`;
-        const qs = `?days=${debouncedDays}&excludeIPs=${excludeIPs}`;
+  const fetchAll = useCallback(async () => {
+    try {
+      const base = `/api/proxy/Stats`;
+      const qs = `?days=${debouncedDays}&excludeIPs=${excludeIPs}`;
 
-        const [hitMissRes, clientHits, clientMisses] = await Promise.all([
-          fetch(`${base}/GetClientHitMissGrid${qs}`),
-          fetch(`${base}/GetClientHits${qs}`),
-          fetch(`${base}/GetClientMisses${qs}`)
-        ]);
+      const [hitMissRes, clientHits, clientMisses] = await Promise.all([
+        fetch(`${base}/GetClientHitMissGrid${qs}`),
+        fetch(`${base}/GetClientHits${qs}`),
+        fetch(`${base}/GetClientMisses${qs}`)
+      ]);
 
-        const hitMissGrid = await hitMissRes.json();
-        setHitMissGridData(hitMissGrid);
+      const hitMissGrid = await hitMissRes.json();
+      setHitMissGridData(hitMissGrid);
 
-        const service = await clientHits.json();
-        setHitBytesByClient(service.map((s: ClientData) => ({ x: s.ipAddress, y: s.totalBytes })));
+      const service = await clientHits.json();
+      setHitBytesByClient(service.map((s: ClientData) => ({ x: s.ipAddress, y: s.totalBytes })));
 
-        const miss = await clientMisses.json();
-        setMissBytesByClient(miss.map((s: ClientData) => ({ x: s.ipAddress, y: s.totalBytes })));
+      const miss = await clientMisses.json();
+      setMissBytesByClient(miss.map((s: ClientData) => ({ x: s.ipAddress, y: s.totalBytes })));
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+    }
+  }, [debouncedDays, excludeIPs]);
 
-
-      } catch (err) {
-        console.error("Failed to fetch data:", err);
-      }
-    };
 
   useEffect(() => {
     fetchAll();
   }, [debouncedDays, excludeIPs]);
 
   useEffect(() => {
-      const connection = getSignalRConnection();
-  
-      const handler = () => {
-        fetchAll();
-      };
-  
-      connection.on("UpdateDownloadEvents", handler);
-  
-      startConnection();
-  
-      return () => {
-        connection.off("UpdateDownloadEvents", handler);
-      };
-    }, []);
+    const connection = getSignalRConnection();
+
+    const handler = () => {
+      fetchAll();
+    };
+
+    connection.on("UpdateDownloadEvents", handler);
+    startConnection();
+
+    return () => {
+      connection.off("UpdateDownloadEvents", handler);
+    };
+  }, [fetchAll]);
 
   const commonProps = {
     legendSettings: {

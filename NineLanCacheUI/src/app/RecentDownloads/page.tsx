@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   GridComponent,
   ColumnsDirective,
@@ -124,7 +124,7 @@ export default function RecentDownloads() {
   const days =
     selectedRange === "custom" ? parseInt(customDays) || 0 : parseInt(selectedRange);
 
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -137,7 +137,6 @@ export default function RecentDownloads() {
 
       const newData: DownloadEvent[] = await res.json();
 
-      // Wait for Steam images to preload
       const imagesToLoad = newData.filter(d => d.cacheIdentifier === "steam" && d.steamDepot?.steamAppId);
       await Promise.all(imagesToLoad.map(d => {
         return new Promise<void>(resolve => {
@@ -170,9 +169,9 @@ export default function RecentDownloads() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [days, excludeIPs]);
 
-  async function fetchAndMergeNewData() {
+  const fetchAndMergeNewData = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (days > 0) params.append("days", days.toString());
@@ -205,30 +204,25 @@ export default function RecentDownloads() {
     } catch (error) {
       console.error("Failed to fetch and merge new data", error);
     }
-  }
-
-  useEffect(() => {
-    if (gridRef.current) {
-        gridRef.current.dataSource = [];
-    }
-    fetchData();
   }, [days, excludeIPs]);
 
   useEffect(() => {
+    if (gridRef.current) {
+      gridRef.current.dataSource = [];
+    }
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
     const connection = getSignalRConnection();
-
-    const handler = () => {
-      fetchAndMergeNewData();
-    };
-
-    connection.on("UpdateDownloadEvents", handler);
+    connection.on("UpdateDownloadEvents", fetchAndMergeNewData);
 
     startConnection();
 
     return () => {
-      connection.off("UpdateDownloadEvents", handler);
+      connection.off("UpdateDownloadEvents", fetchAndMergeNewData);
     };
-  }, []);
+  }, [fetchAndMergeNewData]);
 
 
   return (
