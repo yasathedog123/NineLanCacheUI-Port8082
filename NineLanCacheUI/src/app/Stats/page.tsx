@@ -192,9 +192,9 @@ export default function Stats() {
               >
                 <ColumnsDirective>
                   <ColumnDirective field="ipAddress" headerText="Service" width="150" />
-                  <ColumnDirective field="totalHits" headerText="Total Bytes" width="150"
+                  <ColumnDirective field="totalHits" headerText="Hit Bytes" width="150"
                     template={(props: HitMissData) => formatBytes(props.totalHits)} />
-                  <ColumnDirective field="totalMisses" headerText="Total Bytes" width="150"
+                  <ColumnDirective field="totalMisses" headerText="Miss Bytes" width="150"
                     template={(props: HitMissData) => formatBytes(props.totalMisses)} />
                 </ColumnsDirective>
                 <Inject services={[Page, Sort, Filter, Toolbar]} />
