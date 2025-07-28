@@ -116,12 +116,12 @@ namespace NineLanCacheUI_API.Controllers
                 ? await _context.ExcludedIps.Select(x => x.IpAddress.Trim()).ToArrayAsync()
                 : Array.Empty<string>();
 
-            IQueryable<DbDownloadEvent> queryableEvents = _context.DownloadEvents;
+            IQueryable<DbDownloadEvent> queryableEvents = _context.DownloadEvents.Where(e => e.CacheIdentifier == "steam");
 
             // Apply IP exclusion
             if (excludeIPs)
             {
-                queryableEvents = queryableEvents.Where(e => !excludedIps.Contains(e.ClientIp) && e.CacheIdentifier == "steam");
+                queryableEvents = queryableEvents.Where(e => !excludedIps.Contains(e.ClientIp));
             }
 
             // Apply date filter
