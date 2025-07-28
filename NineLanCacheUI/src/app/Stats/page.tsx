@@ -189,7 +189,7 @@ export default function Stats() {
                 
               >
                 <ColumnsDirective>
-                  <ColumnDirective field="ipAddress" headerText="Service" width="150" />
+                  <ColumnDirective field="ipAddress" headerText="Client IPs" width="150" />
                   <ColumnDirective field="totalHits" headerText="Hit Bytes" width="150"
                     template={(props: HitMissData) => formatBytes(props.totalHits)} />
                   <ColumnDirective field="totalMisses" headerText="Miss Bytes" width="150"
