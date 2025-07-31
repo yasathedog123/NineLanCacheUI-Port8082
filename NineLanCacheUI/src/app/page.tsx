@@ -6,9 +6,21 @@ import {
   Inject,
   PieSeries,
   AccumulationTooltip,
-  AccumulationLegend
+  AccumulationLegend,
+  StyleSettings
 } from '@syncfusion/ej2-react-charts';
-import { formatBytes, chartPalette } from "../../lib/Utilities";
+
+import {
+  ChartComponent,
+  SeriesCollectionDirective,
+  SeriesDirective,
+  SplineSeries,
+  Tooltip,
+  DateTime,
+} from '@syncfusion/ej2-react-charts';
+
+
+import { formatBytes, chartPalette, formatBits } from "../../lib/Utilities";
 import React, { useEffect, useState, useCallback } from 'react';
 import { getSignalRConnection, stopConnection, startConnection } from "../../lib/SignalR";
 
@@ -52,6 +64,23 @@ export default function Home() {
   const [selectedRange, setSelectedRange] = useState(() => getStoredFilters()?.selectedRange || "0");
   const [customDays, setCustomDays] = useState(() => getStoredFilters()?.customDays || "");
   const [excludeIPs, setExcludeIPs] = useState(() => getStoredFilters()?.excludeIPs ?? true);
+
+  const [interfaceOptions, setInterfaceOptions] = useState<string[]>([]);
+  const [selectedInterface, setSelectedInterface] = useState<string>('');
+  const [rawUploadSeries, setRawUploadSeries] = useState<{ x: Date; y: number }[]>([]);
+  const [uploadSeries, setUploadSeries] = useState<{ x: Date; y: number }[]>([]);
+  const SMOOTH_WINDOW = 10;
+
+  // Helper to compute moving average on raw data
+  function smoothData(rawData: { x: Date; y: number }[]) {
+    return rawData.map((_, idx, arr) => {
+      const start = Math.max(0, idx - SMOOTH_WINDOW + 1);
+      const window = arr.slice(start, idx + 1);
+      const avgY = window.reduce((sum, p) => sum + p.y, 0) / window.length;
+      return { x: arr[idx].x, y: avgY };
+    });
+  }
+
 
   useEffect(() => {
     setStoredFilters({ selectedRange, customDays, excludeIPs });
@@ -148,6 +177,82 @@ export default function Home() {
       fill: '#0a0a0a',
     },
   };
+
+  useEffect(() => {
+    const fetchInterfaces = async () => {
+      const res = await fetch('/api/proxy/Network/GetNetworkInterfaces');
+      const data = await res.json();
+      setInterfaceOptions(data);
+      if (data.length > 0) setSelectedInterface(data[0]);
+    };
+    fetchInterfaces();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedInterface) return;
+
+    let isMounted = true;
+
+    const fetchGraphData = async () => {
+      try {
+        const res = await fetch(`/api/proxy/Network/GetNetworkStats?inter=${selectedInterface}&minutes=30`);
+        const raw = await res.json();
+        if (!isMounted) return;
+
+        const rawPoints = raw.map((d: { timestamp: string; bytesSentPerSec: number }) => ({
+          x: new Date(d.timestamp),
+          y: d.bytesSentPerSec,
+        }));
+
+        setRawUploadSeries(rawPoints);
+        setUploadSeries(smoothData(rawPoints));
+      } catch (err) {
+        console.error('Initial graph fetch failed:', err);
+      }
+    };
+
+    fetchGraphData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedInterface]);
+
+  useEffect(() => {
+    if (!selectedInterface) return;
+
+    let cancelled = false;
+
+    const interval = setInterval(async () => {
+      if (cancelled) return;
+
+      try {
+        const res = await fetch(`/api/proxy/Network/GetLatestNetworkStat?inter=${selectedInterface}`);
+        const data = await res.json();
+
+        if (data?.timestamp && data?.bytesSentPerSec !== undefined) {
+          const newRawPoint = {
+            x: new Date(data.timestamp),
+            y: data.bytesSentPerSec,
+          };
+
+          setRawUploadSeries(prevRaw => {
+            const thirtyMinAgo = new Date(newRawPoint.x.getTime() - 30 * 60 * 1000);
+            const filteredRaw = [...prevRaw.filter(p => p.x > thirtyMinAgo), newRawPoint];
+            setUploadSeries(smoothData(filteredRaw)); // smooth only once here
+            return filteredRaw;
+          });
+        }
+      } catch (err) {
+        console.error('Polling failed:', err);
+      }
+    }, 1000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [selectedInterface]);
 
   return (
     <div>
@@ -305,6 +410,81 @@ export default function Home() {
         >
           {excludeIPs ? 'Exclude IPs' : 'Include All IPs'}
         </button>
+      </div>
+      <div className="w-full mt-8 px-8 container">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-white">Cache Usage Speed</h2>
+          <select
+            value={selectedInterface}
+            onChange={(e) => setSelectedInterface(e.target.value)}
+            className="text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+            style={{ margin: '0', color: '#ffffff', backgroundColor: '#1a1a1a' }}
+          >
+            {interfaceOptions.map((iface) => (
+              <option key={iface} value={iface}>
+                {iface}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {uploadSeries.length > 0 && (
+          <div className="w-full h-96 p-4 rounded-md shadow">
+            <ChartComponent
+              primaryXAxis={{
+                valueType: 'DateTime',
+                labelFormat: 'HH:mm:ss',
+                title: 'Time',
+                labelStyle: { color: '#fff', fontFamily: 'Poppins' },
+                titleStyle: { color: '#fff', fontFamily: 'Poppins' },
+              }}
+              primaryYAxis={{
+                title: 'Speed',
+                minimum: 0,
+                labelStyle: { color: '#fff', fontFamily: 'Poppins' },
+                titleStyle: { color: '#fff', fontFamily: 'Poppins' },
+                labelIntersectAction: 'Rotate45',
+              }}
+              axisLabelRender={(args) => {
+                if (args.axis.name === 'primaryYAxis') {
+                  const num = Number(args.text);
+                  if (!isNaN(num)) {
+                    args.text = formatBits(num) + '/s';
+                  }
+                }
+              }}
+              tooltip={{
+                enable: true,
+                StyleSettings: { fontFamily: 'Poppins, sans-serif', fontSize: '14px', color: '#ffffff' },
+                fill: '#0a0a0a',
+              }}
+              tooltipRender={(args) => {
+                const y = args.point?.y;
+                const x = args.point?.x;
+
+                if (y !== undefined && y !== null && x) {
+                  const time = new Date(x).toLocaleTimeString(undefined, { hour12: false }); // "HH:mm:ss"
+                  args.text = `${time} : ${formatBits(y)}/s`;
+                }
+              }}
+              background="#1a1a1a"
+              palettes={['#4CAF50']}
+            >
+              <Inject services={[SplineSeries, Tooltip, DateTime]} />
+              <SeriesCollectionDirective>
+                <SeriesDirective
+                  dataSource={uploadSeries}
+                  xName="x"
+                  yName="y"
+                  type="Spline"
+                  width={2}
+                  marker={{ visible: true }}
+                  name="Usage Speed"
+                />
+              </SeriesCollectionDirective>
+            </ChartComponent>
+          </div>
+        )}
       </div>
     </div>
   );

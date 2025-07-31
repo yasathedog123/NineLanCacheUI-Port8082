@@ -9,6 +9,19 @@ export const formatBytes = (bytes: number) => {
   return `${bytes.toFixed(1)} ${units[i]}`;
 };
 
+export const formatBits = (bytes: number) => {
+  let bits = bytes * 8;
+  if (bits < 1024) return `${bits} b`;
+  const units = ['Kb', 'Mb', 'Gb', 'Tb'];
+  let i = -1;
+  do {
+    bits /= 1024;
+    i++;
+  } while (bits >= 1024 && i < units.length - 1);
+  return `${bits.toFixed(1)} ${units[i]}`;
+};
+
+
 export const chartPalette = [
   '#4CAF50',
   '#ff3131ff',

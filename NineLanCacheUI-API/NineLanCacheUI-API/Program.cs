@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using NineLanCacheUI_API.Hubs;
 using Microsoft.AspNetCore.Rewrite;
 using NineLanCacheUI_API.Helpers;
+using NineLanCacheUI_API.Services.NetworkMonitor;
 namespace NineLanCacheUI_API
 {
     public class Program
@@ -76,6 +77,7 @@ namespace NineLanCacheUI_API
             builder.Services.AddHttpClient();
             builder.Services.AddSingleton<SteamManifestService>();
             builder.Services.AddHostedService<FrontendRefresherService>();
+            builder.Services.AddHostedService<NetworkPollingService>();
 
 
             if (Convert.ToBoolean(builder.Configuration["DirectSteamIntegration"]))
@@ -126,10 +128,11 @@ namespace NineLanCacheUI_API
             }
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.MapOpenApi();
-            }
+            //if (app.Environment.IsDevelopment())
+            //{
+            //    app.MapOpenApi();
+            //}
+            app.MapOpenApi();
 
             var option = new RewriteOptions();
             option.AddRedirect("^$", "swagger");

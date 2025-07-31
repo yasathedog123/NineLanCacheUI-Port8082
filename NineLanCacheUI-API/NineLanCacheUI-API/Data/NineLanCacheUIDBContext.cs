@@ -15,6 +15,7 @@ namespace NineLanCacheUI_API.Data
         public DbSet<DbSetting> Settings => Set<DbSetting>();
         public DbSet<DbSteamManifest> SteamManifests => Set<DbSteamManifest>();
         public DbSet<DbExcludedIp> ExcludedIps => Set<DbExcludedIp>();
+        public DbSet<DbNetworkInterfaceStat> Stats => Set<DbNetworkInterfaceStat>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -32,6 +33,9 @@ namespace NineLanCacheUI_API.Data
             modelBuilder.Entity<DbExcludedIp>()
                         .HasIndex(e => e.IpAddress)
                         .IsUnique();
+
+            modelBuilder.Entity<DbNetworkInterfaceStat>()
+                        .HasIndex(s => s.InterfaceName);
         }
 
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
