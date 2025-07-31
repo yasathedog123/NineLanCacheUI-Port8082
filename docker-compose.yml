@@ -3,8 +3,6 @@ services:
     image: ninepiece2/nine-lancache-ui:api
     restart: unless-stopped
     network_mode: "host"
-    ports:
-      - '7401:80'
     environment:
       - LanCacheLogsDirectory=/var/ninelancacheui/lancachelogs
       - LanCacheUIDataDirectory=/var/ninelancacheuidata
@@ -14,17 +12,16 @@ services:
       - LANG=en_CA.UTF-8
       - DirectSteamIntegration=true
       - SkipLinesBasedOnBytesRead=true
-      - ASPNETCORE_HTTP_PORTS=80
+      - ASPNETCORE_HTTP_PORTS=7401
     volumes:
-      #- "/home/romit/NineLanCacheUI/backendData:/var/ninelancacheuidata"
+      - "/home/romit/NineLanCacheUI/backendData:/var/ninelancacheuidata"
       - "/mnt/NvmeSSD/LanCacheData/logs:/var/ninelancacheui/lancachelogs:ro"
     dns:
       - 192.168.15.200
   ui:
     image: ninepiece2/nine-lancache-ui:ui
     restart: unless-stopped
-    ports:
-      - '7402:80'
+    network_mode: "host"
     environment:
-      - API_BASE_URL=http://192.168.15.200:7401
+      - API_BASE_URL=http://localhost:7401
       - AllowedHosts=*
