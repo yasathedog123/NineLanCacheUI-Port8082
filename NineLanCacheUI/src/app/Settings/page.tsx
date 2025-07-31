@@ -13,6 +13,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [selectedInterface, setSelectedInterface] = useState("");
+  const [interfaceOptions, setInterfaceOptions] = useState<string[]>([]);
+  const [interfaceLoading, setInterfaceLoading] = useState(true);
+
 
   useEffect(() => {
     async function fetchIps() {
@@ -60,21 +64,48 @@ export default function SettingsPage() {
 
   const removeIp = async (ipToRemove: string) => {
     try {
-        const res = await fetch(`/api/proxy/Settings/DeleteExcludedIp`, {
+      const res = await fetch(`/api/proxy/Settings/DeleteExcludedIp`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ip: ipToRemove }),
-        });
+      });
 
-        if (res.ok) {
+      if (res.ok) {
         setExcludedIps((prev) => prev.filter((ip) => ip !== ipToRemove));
-        } else {
+      } else {
         setError("Failed to delete IP.");
-        }
+      }
     } catch {
         setError("Failed to delete IP.");
     }
-};
+  };
+
+  useEffect(() => {
+    async function fetchInterfacesAndSetting() {
+      try {
+        setInterfaceLoading(true);
+
+        const [interfacesRes, selectedRes] = await Promise.all([
+          fetch("/api/proxy/Network/GetNetworkInterfaces"),
+          fetch("/api/proxy/Settings/GetNetworkGraphInterface")
+        ]);
+
+        const ifaceList = await interfacesRes.json();
+        const selectedData = await selectedRes.json();
+
+        setInterfaceOptions(ifaceList);
+        setSelectedInterface(selectedData.interfaceName || "");
+      } catch (err) {
+        console.error("Error loading interface data:", err);
+        setError("Failed to load network interface settings.");
+      } finally {
+        setInterfaceLoading(false);
+      }
+    }
+
+    fetchInterfacesAndSetting();
+  }, []);
+
 
   return (
     <div
@@ -152,6 +183,45 @@ export default function SettingsPage() {
         </div>
         {error && <p className="mt-2 text-red-500 font-semibold">{error}</p>}
       </section>
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Network Graph Interface</h2>
+
+        {interfaceLoading ? (
+          <p>Loading interfaces...</p>
+        ) : (
+          <select
+            value={selectedInterface}
+            onChange={async (e) => {
+              const newInterface = e.target.value;
+              setSelectedInterface(newInterface);
+
+              try {
+                const res = await fetch("/api/proxy/Settings/SetNetworkGraphInterface", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ interface: newInterface })
+                });
+
+                if (!res.ok) {
+                  const err = await res.json();
+                  setError(err.message || "Failed to update network interface.");
+                }
+              } catch {
+                setError("Failed to update network interface.");
+              }
+            }}
+            className="text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+            style={{ margin: '0', color: '#ffffff', backgroundColor: '#1a1a1a' }}
+          >
+            {interfaceOptions.map((iface) => (
+              <option key={iface} value={iface}>
+                {iface}
+              </option>
+            ))}
+          </select>
+        )}
+      </section>
+
     </div>
   );
 }

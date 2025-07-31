@@ -19,7 +19,6 @@ import {
   DateTime,
 } from '@syncfusion/ej2-react-charts';
 
-
 import { formatBytes, chartPalette, formatBits } from "../../lib/Utilities";
 import React, { useEffect, useState, useCallback } from 'react';
 import { getSignalRConnection, stopConnection, startConnection } from "../../lib/SignalR";
@@ -52,6 +51,49 @@ function setStoredFilters(filters: Filters) {
   localStorage.setItem(FILTER_KEY, JSON.stringify(filters));
 }
 
+function smoothData(rawData: { x: Date; y: number }[], alpha = 0.2): { x: Date; y: number }[] {
+  if (rawData.length < 2) return rawData;
+
+  const smoothed: { x: Date; y: number }[] = [];
+  let prevY = rawData[0].y;
+
+  for (let i = 0; i < rawData.length; i++) {
+    const current = rawData[i];
+    const smoothedY = alpha * current.y + (1 - alpha) * prevY;
+    smoothed.push({ x: current.x, y: smoothedY });
+    prevY = smoothedY;
+  }
+
+  return smoothed;
+}
+
+
+function clampSpike(data: { x: Date; y: number }[], factor = 4) {
+  return data.map((point, i, arr) => {
+    if (i === 0) return point;
+    const prev = arr[i - 1].y;
+    const maxAllowed = Math.max(prev * factor, prev + 10_000_000);
+    return {
+      ...point,
+      y: Math.min(point.y, maxAllowed)
+    };
+  });
+}
+
+function deduplicateTimestamps(data: { x: Date; y: number }[]): { x: Date; y: number }[] {
+  const seen = new Set();
+  return data.filter(({ x }) => {
+    const key = x.getTime();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function preprocessGraph(raw: { x: Date; y: number }[]): { x: Date; y: number }[] {
+    return clampSpike(deduplicateTimestamps(smoothData(raw, 0.1)));
+}
+
 export default function Home() {
   const [hitMissData, setHitMissData] = useState([
     { x: 'Hit Bytes', y: 0 },
@@ -65,21 +107,9 @@ export default function Home() {
   const [customDays, setCustomDays] = useState(() => getStoredFilters()?.customDays || "");
   const [excludeIPs, setExcludeIPs] = useState(() => getStoredFilters()?.excludeIPs ?? true);
 
-  const [interfaceOptions, setInterfaceOptions] = useState<string[]>([]);
-  const [selectedInterface, setSelectedInterface] = useState<string>('');
   const [rawUploadSeries, setRawUploadSeries] = useState<{ x: Date; y: number }[]>([]);
   const [uploadSeries, setUploadSeries] = useState<{ x: Date; y: number }[]>([]);
   const SMOOTH_WINDOW = 10;
-
-  // Helper to compute moving average on raw data
-  function smoothData(rawData: { x: Date; y: number }[]) {
-    return rawData.map((_, idx, arr) => {
-      const start = Math.max(0, idx - SMOOTH_WINDOW + 1);
-      const window = arr.slice(start, idx + 1);
-      const avgY = window.reduce((sum, p) => sum + p.y, 0) / window.length;
-      return { x: arr[idx].x, y: avgY };
-    });
-  }
 
 
   useEffect(() => {
@@ -179,23 +209,11 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const fetchInterfaces = async () => {
-      const res = await fetch('/api/proxy/Network/GetNetworkInterfaces');
-      const data = await res.json();
-      setInterfaceOptions(data);
-      if (data.length > 0) setSelectedInterface(data[0]);
-    };
-    fetchInterfaces();
-  }, []);
-
-  useEffect(() => {
-    if (!selectedInterface) return;
-
     let isMounted = true;
 
     const fetchGraphData = async () => {
       try {
-        const res = await fetch(`/api/proxy/Network/GetNetworkStats?inter=${selectedInterface}&minutes=30`);
+        const res = await fetch(`/api/proxy/Network/GetNetworkStats?minutes=30`);
         const raw = await res.json();
         if (!isMounted) return;
 
@@ -205,7 +223,7 @@ export default function Home() {
         }));
 
         setRawUploadSeries(rawPoints);
-        setUploadSeries(smoothData(rawPoints));
+        setUploadSeries(preprocessGraph(rawPoints));
       } catch (err) {
         console.error('Initial graph fetch failed:', err);
       }
@@ -216,18 +234,16 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, [selectedInterface]);
+  }, []);
 
   useEffect(() => {
-    if (!selectedInterface) return;
-
     let cancelled = false;
 
     const interval = setInterval(async () => {
       if (cancelled) return;
 
       try {
-        const res = await fetch(`/api/proxy/Network/GetLatestNetworkStat?inter=${selectedInterface}`);
+        const res = await fetch(`/api/proxy/Network/GetLatestNetworkStat`);
         const data = await res.json();
 
         if (data?.timestamp && data?.bytesSentPerSec !== undefined) {
@@ -239,7 +255,7 @@ export default function Home() {
           setRawUploadSeries(prevRaw => {
             const thirtyMinAgo = new Date(newRawPoint.x.getTime() - 30 * 60 * 1000);
             const filteredRaw = [...prevRaw.filter(p => p.x > thirtyMinAgo), newRawPoint];
-            setUploadSeries(smoothData(filteredRaw)); // smooth only once here
+            setUploadSeries(preprocessGraph(filteredRaw)); // smooth only once here
             return filteredRaw;
           });
         }
@@ -252,7 +268,7 @@ export default function Home() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [selectedInterface]);
+  }, []);
 
   return (
     <div>
@@ -414,18 +430,6 @@ export default function Home() {
       <div className="w-full mt-8 px-8 container">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-white">Cache Usage Speed</h2>
-          <select
-            value={selectedInterface}
-            onChange={(e) => setSelectedInterface(e.target.value)}
-            className="text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-            style={{ margin: '0', color: '#ffffff', backgroundColor: '#1a1a1a' }}
-          >
-            {interfaceOptions.map((iface) => (
-              <option key={iface} value={iface}>
-                {iface}
-              </option>
-            ))}
-          </select>
         </div>
 
         {uploadSeries.length > 0 && (
@@ -437,6 +441,7 @@ export default function Home() {
                 title: 'Time',
                 labelStyle: { color: '#fff', fontFamily: 'Poppins' },
                 titleStyle: { color: '#fff', fontFamily: 'Poppins' },
+                intervalType: 'Seconds',
               }}
               primaryYAxis={{
                 title: 'Speed',
@@ -477,9 +482,10 @@ export default function Home() {
                   xName="x"
                   yName="y"
                   type="Spline"
-                  width={2}
-                  marker={{ visible: true }}
+                  width={4}
+                  marker={{ visible: false }}
                   name="Usage Speed"
+                  animation={{ enable: false , duration: 1000, delay: 0 }}
                 />
               </SeriesCollectionDirective>
             </ChartComponent>

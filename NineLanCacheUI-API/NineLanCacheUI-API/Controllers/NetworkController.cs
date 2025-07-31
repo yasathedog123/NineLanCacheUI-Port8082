@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NineLanCacheUI_API.Data;
 using NineLanCacheUI_API.Services.NetworkMonitor;
-
+using NineLanCacheUI_API.Data.Tables;
 namespace NineLanCacheUI_API.Controllers
 {
     [Route("[controller]/[action]")]
@@ -19,10 +19,26 @@ namespace NineLanCacheUI_API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetNetworkStats([FromQuery] string inter, [FromQuery] int minutes = 5)
+        public async Task<IActionResult> GetNetworkStats([FromQuery] int minutes = 5)
         {
-            if (string.IsNullOrWhiteSpace(inter))
-                return BadRequest("Missing interface name.");
+            var inter = await _context.Settings.Where(s => s.Key == "NetworkGraphInterface").Select(s => s.Value).FirstOrDefaultAsync();
+
+            if (String.IsNullOrEmpty(inter)){
+                inter = _context.Stats
+                    .OrderByDescending(i => i.Timestamp)
+                    .Select(s => s.InterfaceName)
+                    .Distinct()
+                    .First();
+
+                _context.Settings.Add(new DbSetting
+                {
+                    Key = "NetworkGraphInterface",
+                    Value = inter
+                });
+
+                await _context.SaveChangesAsync();
+
+            }
 
             var cutoff = DateTime.UtcNow.AddMinutes(-minutes);
 
@@ -54,8 +70,28 @@ namespace NineLanCacheUI_API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetLatestNetworkStat([FromQuery] string inter)
+        public async Task<IActionResult> GetLatestNetworkStat()
         {
+            var inter = await _context.Settings.Where(s => s.Key == "NetworkGraphInterface").Select(s => s.Value).FirstOrDefaultAsync();
+
+            if (String.IsNullOrEmpty(inter))
+            {
+                inter = _context.Stats
+                    .OrderByDescending(i => i.Timestamp)
+                    .Select(s => s.InterfaceName)
+                    .Distinct()
+                    .First();
+
+                _context.Settings.Add(new DbSetting
+                {
+                    Key = "NetworkGraphInterface",
+                    Value = inter
+                });
+
+                await _context.SaveChangesAsync();
+
+            }
+
             if (string.IsNullOrWhiteSpace(inter))
                 return BadRequest("Missing interface name.");
 

@@ -10,8 +10,8 @@ services:
       - TZ=America/Toronto
       - ASPNETCORE_ENVIRONMENT=Production
       - LANG=en_CA.UTF-8
-      - DirectSteamIntegration=true
-      - SkipLinesBasedOnBytesRead=true
+      - DirectSteamIntegration=false
+      - SkipLinesBasedOnBytesRead=false
       - ASPNETCORE_HTTP_PORTS=7401
     volumes:
       - "/home/romit/NineLanCacheUI/backendData:/var/ninelancacheuidata"

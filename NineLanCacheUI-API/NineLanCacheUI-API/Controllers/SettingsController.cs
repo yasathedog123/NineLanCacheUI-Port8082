@@ -68,6 +68,34 @@ namespace NineLanCacheUI_API.Controllers
             return Ok(new { message = "IP removed successfully." });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetNetworkGraphInterface()
+        {
+            var inter = await _context.Settings.Where(s => s.Key == "NetworkGraphInterface").Select(s => s.Value).FirstOrDefaultAsync();
+
+            return Ok(new { InterfaceName = inter });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SetNetworkGraphInterface([FromBody] NetworkGraphInterface ito)
+        {
+            if (string.IsNullOrWhiteSpace(ito.Interface))
+                return BadRequest("Interface name is required.");
+            var setting = await _context.Settings
+                .FirstOrDefaultAsync(s => s.Key == "NetworkGraphInterface");
+            if (setting == null)
+            {
+                setting = new DbSetting { Key = "NetworkGraphInterface", Value = ito.Interface };
+                _context.Settings.Add(setting);
+            }
+            else
+            {
+                setting.Value = ito.Interface;
+            }
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Network graph interface updated successfully." });
+        }
+
         public class ExcludedIpRequest
         {
             public string Ip { get; set; } = null!;
@@ -76,6 +104,10 @@ namespace NineLanCacheUI_API.Controllers
         public class IpDto
         {
             public string Ip { get; set; } = "";
+        }
+        public class NetworkGraphInterface
+        {
+            public string Interface { get; set; } = "";
         }
     }
 }
