@@ -22,6 +22,7 @@ import {
 import { formatBytes, chartPalette, formatBits } from "../../lib/Utilities";
 import React, { useEffect, useState, useCallback } from 'react';
 import { getSignalRConnection, stopConnection, startConnection } from "../../lib/SignalR";
+import { text } from 'stream/consumers';
 
 interface ServiceData {
   service: string;
@@ -427,14 +428,16 @@ export default function Home() {
           {excludeIPs ? 'Exclude IPs' : 'Include All IPs'}
         </button>
       </div>
-      <div className="w-full mt-8 px-8 container">
+      <div className="w-full mt-8 px-8 container" style={{ marginBottom: '4rem' }}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-white">Cache Usage Speed</h2>
         </div>
 
         {uploadSeries.length > 0 && (
-          <div className="w-full h-96 p-4 rounded-md shadow">
+          <div className="w-full h-96 p-4 rounded-lg" style={{marginBottom: '3rem'}}>
             <ChartComponent
+              className='border rounded-lg'
+              style={{ borderColor: '#0a0a0a', borderWidth: '1px' }}
               primaryXAxis={{
                 valueType: 'DateTime',
                 labelFormat: 'HH:mm:ss',
@@ -460,7 +463,11 @@ export default function Home() {
               }}
               tooltip={{
                 enable: true,
-                StyleSettings: { fontFamily: 'Poppins, sans-serif', fontSize: '14px', color: '#ffffff' },
+                textStyle: {
+                  fontFamily: 'Poppins, sans-serif',
+                  size: '14px',
+                  color: '#ffffff'  
+                },
                 fill: '#0a0a0a',
               }}
               tooltipRender={(args) => {

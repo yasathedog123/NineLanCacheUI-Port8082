@@ -11,6 +11,7 @@ export const formatBytes = (bytes: number) => {
 
 export const formatBits = (bytes: number) => {
   let bits = bytes * 8;
+  if (bits < 1 && bits > 0) return `1 b`;
   if (bits < 1024) return `${bits} b`;
   const units = ['Kb', 'Mb', 'Gb', 'Tb'];
   let i = -1;
