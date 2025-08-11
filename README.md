@@ -114,6 +114,7 @@ services:
 | - "/mnt/NvmeSSD/LanCacheData/logs:/var/ninelancacheui/lancachelogs:ro" | Change the part before the `:` to the log directory for lancache |
 
 **Environment Variables UI**
+
 | Variable  | Explanation | Default | 
 | -- | -- | -- |
 | AllowedHosts | Sets the HOSTS header for CORS. Leave at * unless you know what you're doing | * |
