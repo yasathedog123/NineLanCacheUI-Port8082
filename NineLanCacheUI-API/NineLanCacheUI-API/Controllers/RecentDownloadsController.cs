@@ -50,10 +50,19 @@ namespace NineLanCacheUI_API.Controllers
             // Only include events with cache hits or misses
             queryableEvents = queryableEvents.Where(e => e.CacheHitBytes != 0 || e.CacheMissBytes != 0);
 
-            int takeNumber = limit > 0 ? limit : 100;
-            var recentEventsSubquery = queryableEvents
-                .OrderByDescending(e => e.LastUpdatedAt)
-                .Take(takeNumber);
+            IQueryable<DbDownloadEvent> recentEventsSubquery;
+
+            if (limit > 0)
+            {
+                recentEventsSubquery = queryableEvents
+                    .OrderByDescending(e => e.LastUpdatedAt)
+                    .Take(limit);
+            }
+            else
+            {
+                recentEventsSubquery = queryableEvents
+                    .OrderByDescending(e => e.LastUpdatedAt);
+            }
 
             var joined = from e in recentEventsSubquery
                          join depot in _context.SteamDepots
@@ -134,11 +143,20 @@ namespace NineLanCacheUI_API.Controllers
             // Only include events with cache hits or misses
             queryableEvents = queryableEvents.Where(e => e.CacheHitBytes != 0 || e.CacheMissBytes != 0);
 
-            int takeNumber = limit > 0 ? limit : 100;
-            var recentEventsSubquery = queryableEvents
-                .OrderByDescending(e => e.LastUpdatedAt)
-                .Take(takeNumber);
+            IQueryable<DbDownloadEvent> recentEventsSubquery;
 
+            if (limit > 0)
+            {
+                recentEventsSubquery = queryableEvents
+                    .OrderByDescending(e => e.LastUpdatedAt)
+                    .Take(limit);
+            }
+            else
+            {
+                recentEventsSubquery = queryableEvents
+                    .OrderByDescending(e => e.LastUpdatedAt);
+            }
+            
             var joined = from e in recentEventsSubquery
                          join depot in _context.SteamDepots
                              on e.DownloadIdentifier equals depot.SteamDepotId into depotJoin
