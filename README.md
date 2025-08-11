@@ -19,7 +19,7 @@
 | [![UI Build](https://img.shields.io/github/actions/workflow/status/NinePiece2/NineLanCacheUI/build-ui.yml?label=UI%20Build&logo=github&style=flat-square)](https://github.com/NinePiece2/NineLanCacheUI/actions/workflows/build-ui.yml) [![API Build](https://img.shields.io/github/actions/workflow/status/NinePiece2/NineLanCacheUI/build-api.yml?label=API%20Build&logo=github&style=flat-square)](https://github.com/NinePiece2/NineLanCacheUI/actions/workflows/build-api.yml) |
 
 Based on [DeveLanCacheUI_Backend](https://github.com/devedse/DeveLanCacheUI_Backend) / [DeveLanCacheUI_Frontend](https://github.com/devedse/DeveLanCacheUI_Frontend)
-Directly forking the DeveLanCacheUI_Backend project and creating a new UI for [LanCache.NET](https://lancache.net/) for the backend using Syncfusion grids and pie charts for an improved look and better data filtering and visualization. There are also filters that are perisitant throughout certain pages and through closing and reopening the page that allow for time filtration and showing or hiding excluded IPs.
+Directly forking the DeveLanCacheUI_Backend project and creating a new UI for [LanCache.NET](https://lancache.net/). This is done using Syncfusion grids and pie charts for an improved look and better data filtering and visualization. There are also filters that are perisitant throughout certain pages and through closing and reopening the page that allow for time filtration and showing or hiding excluded IPs.
 
 The Backend/API runs a .NET 9 Web API and the Frontend/UI uses NextJS and Nginx. 
 
