@@ -12,7 +12,7 @@ services:
       - LANG=en_US.UTF-8
       - DirectSteamIntegration=true
       - SkipLinesBasedOnBytesRead=true
-      - ASPNETCORE_HTTP_PORTS=7401
+      - ASPNETCORE_HTTP_PORTS=8083
     volumes:
       - "/volume1/docker/SteamGames/backendData:/var/ninelancacheuidata"
       - "/volume1/docker/SteamGames/logs:/var/ninelancacheui/lancachelogs:ro"
@@ -23,5 +23,5 @@ services:
     restart: unless-stopped
     network_mode: "host"
     environment:
-      - API_BASE_URL=http://localhost:7401
+      - API_BASE_URL=http://localhost:8083
       - AllowedHosts=*
