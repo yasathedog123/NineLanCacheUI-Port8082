@@ -7,21 +7,21 @@ services:
       - LanCacheLogsDirectory=/var/ninelancacheui/lancachelogs
       - LanCacheUIDataDirectory=/var/ninelancacheuidata
       - ConnectionStrings__DefaultConnection=Data Source={LanCacheUIDataDirectory}/database/nine-lancache-ui.db;
-      - TZ=America/Toronto
+      - TZ=Europe/Amsterdam
       - ASPNETCORE_ENVIRONMENT=Production
-      - LANG=en_CA.UTF-8
-      - DirectSteamIntegration=false
-      - SkipLinesBasedOnBytesRead=false
+      - LANG=en_US.UTF-8
+      - DirectSteamIntegration=true
+      - SkipLinesBasedOnBytesRead=true
       - ASPNETCORE_HTTP_PORTS=7401
     volumes:
-      - "/home/romit/NineLanCacheUI/backendData:/var/ninelancacheuidata"
-      - "/mnt/NvmeSSD/LanCacheData/logs:/var/ninelancacheui/lancachelogs:ro"
+      - "/volume1/docker/SteamGames/backendData:/var/ninelancacheuidata"
+      - "/volume1/docker/SteamGames/logs:/var/ninelancacheui/lancachelogs:ro"
     dns:
-      - 192.168.15.200
+      - 192.168.1.115
   ui:
     image: ninepiece2/nine-lancache-ui:ui
     restart: unless-stopped
     network_mode: "host"
     environment:
-      - API_BASE_URL=http://localhost:7401
+      - API_BASE_URL=http://192.168.1.115:7401
       - AllowedHosts=*
